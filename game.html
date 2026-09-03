@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Área do Jogo - Plataforma de Jogos</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        background-color: #121212;
+        color: #ffffff;
+        margin: 0;
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
+      header {
+        width: 100%;
+        max-width: 800px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+        border-bottom: 1px solid #333;
+        padding-bottom: 10px;
+      }
+      .badge {
+        background-color: #28a745;
+        color: white;
+        padding: 5px 10px;
+        border-radius: 4px;
+        font-size: 14px;
+        font-weight: bold;
+      }
+      .logout-btn {
+        background-color: #dc3545;
+        color: white;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-weight: bold;
+      }
+      .nav-menu {
+        margin-bottom: 20px;
+      }
+      .nav-btn {
+        background: #007bff;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        margin: 0 5px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-weight: bold;
+      }
+      .game-container {
+        background-color: #1e1e1e;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+        text-align: center;
+        width: 100%;
+        max-width: 800px;
+      }
+      canvas {
+        background: #000;
+        border: 2px solid #333;
+        border-radius: 4px;
+        display: block;
+        margin: 20px auto;
+      }
+      /* Estilos do Jogo da Memória */
+      .memory-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 80px);
+        gap: 10px;
+        justify-content: center;
+        margin-top: 20px;
+      }
+      .memory-card {
+        width: 80px;
+        height: 80px;
+        background-color: #007bff;
+        font-size: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        border-radius: 8px;
+        user-select: none;
+      }
+      .memory-card.flipped {
+        background-color: #ffffff;
+        color: #000;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h2>🎮 Minha Plataforma de Jogos</h2>
+      <div>
+        <span class="badge">Assinatura Ativa</span>
+        <button class="logout-btn" onclick="sair()">Sair</button>
+      </div>
+    </header>
+
+    <div class="nav-menu">
+      <button class="nav-btn" onclick="mostrarJogo('snake')">
+        Jogo da Cobrinha
+      </button>
+      <button class="nav-btn" onclick="mostrarJogo('memory')">
+        Jogo da Memória
+      </button>
+    </div>
+
+    <!-- JOGO DA COBRINHA -->
+    <div class="game-container" id="snakeView">
+      <h1>Jogo da Cobrinha</h1>
+      <p style="color: #aaa">Use as setas do teclado para jogar.</p>
+      <canvas id="snakeGame" width="400" height="400"></canvas>
+    </div>
+
+    <!-- JOGO DA MEMÓRIA -->
+    <div class="game-container" id="memoryView" style="display: none">
+      <h1>Jogo da Memória</h1>
+      <p style="color: #aaa">Encontre os pares de emojis iguais!</p>
+      <div class="memory-grid" id="memoryBoard"></div>
+    </div>
+
+    <script>
+      const token = localStorage.getItem('token');
+      if (!token) {
+        alert('Acesso negado. Faça login para continuar.');
+        window.location.href = '/';
+      }
+
+      function sair() {
+        localStorage.removeItem('token');
+        window.location.href = '/';
+      }
+
+      function mostrarJogo(jogo) {
+        document.getElementById('snakeView').style.display =
+          jogo === 'snake' ? 'block' : 'none';
+        document.getElementById('memoryView').style.display =
+          jogo === 'memory' ? 'block' : 'none';
+      }
+
+      // --- LÓGICA DO JOGO DA COBRINHA ---
+      const canvas = document.getElementById('snakeGame');
+      const ctx = canvas.getContext('2d');
+      const gridSize = 20;
+      const tileCount = canvas.width / gridSize;
+
+      let snake = [{ x: 10, y: 10 }];
+      let food = { x: 15, y: 15 };
+      let dx = 0,
+        dy = 0,
+        score = 0;
+
+      function gameLoop() {
+        if (document.getElementById('snakeView').style.display === 'block') {
+          moveSnake();
+          if (checkGameOver()) {
+            alert('Fim de Jogo! Pontuação: ' + score);
+            resetGame();
+            return;
+          }
+          ctx.fillStyle = '#000';
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          ctx.fillStyle = '#ff0000';
+          ctx.fillRect(
+            food.x * gridSize,
+            food.y * gridSize,
+            gridSize - 2,
+            gridSize - 2
+          );
+          ctx.fillStyle = '#28a745';
+          snake.forEach((part) =>
+            ctx.fillRect(
+              part.x * gridSize,
+              part.y * gridSize,
+              gridSize - 2,
+              gridSize - 2
+            )
+          );
+        }
+      }
+
+      function moveSnake() {
+        if (dx === 0 && dy === 0) return;
+        const head = { x: snake[0].x + dx, y: snake[0].y + dy };
+        snake.unshift(head);
+        if (head.x === food.x && head.y === food.y) {
+          score += 10;
+          food = {
+            Math: Math.floor(Math.random() * tileCount),
+            x: Math.floor(Math.random() * tileCount),
+            y: Math.floor(Math.random() * tileCount),
+          };
+        } else {
+          snake.pop();
+        }
+      }
+
+      function checkGameOver() {
+        if (dx === 0 && dy === 0) return false;
+        const head = snake[0];
+        if (
+          head.x < 0 ||
+          head.x >= tileCount ||
+          head.y < 0 ||
+          head.y >= tileCount
+        )
+          return true;
+        for (let i = 1; i < snake.length; i++) {
+          if (head.x === snake[i].x && head.y === snake[i].y) return true;
+        }
+        return false;
+      }
+
+      function resetGame() {
+        snake = [{ x: 10, y: 10 }];
+        dx = 0;
+        dy = 0;
+        score = 0;
+      }
+
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowUp' && dy === 0) {
+          dx = 0;
+          dy = -1;
+        }
+        if (e.key === 'ArrowDown' && dy === 0) {
+          dx = 0;
+          dy = 1;
+        }
+        if (e.key === 'ArrowLeft' && dx === 0) {
+          dx = -1;
+          dy = 0;
+        }
+        if (e.key === 'ArrowRight' && dx === 0) {
+          dx = 1;
+          dy = 0;
+        }
+      });
+
+      setInterval(gameLoop, 100);
+
+      // --- LÓGICA DO JOGO DA MEMÓRIA ---
+      const emojis = ['🐶', '🐱', '🐭', '🐹', '🐰', '🦊', '🐻', '🐼'];
+      const cardsData = [...emojis, ...emojis].sort(() => Math.random() - 0.5);
+      const board = document.getElementById('memoryBoard');
+      let flippedCards = [];
+
+      cardsData.forEach((emoji) => {
+        const card = document.createElement('div');
+        card.classList.add('memory-card');
+        card.dataset.emoji = emoji;
+        card.addEventListener('click', () => {
+          if (flippedCards.length < 2 && !card.classList.contains('flipped')) {
+            card.classList.add('flipped');
+            card.textContent = emoji;
+            flippedCards.push(card);
+
+            if (flippedCards.length === 2) {
+              if (
+                flippedCards[0].dataset.emoji === flippedCards[1].dataset.emoji
+              ) {
+                flippedCards = [];
+              } else {
+                setTimeout(() => {
+                  flippedCards.forEach((c) => {
+                    c.classList.remove('flipped');
+                    c.textContent = '';
+                  });
+                  flippedCards = [];
+                }, 1000);
+              }
+            }
+          }
+        });
+        board.appendChild(card);
+      });
+    </script>
+  </body>
+</html>
