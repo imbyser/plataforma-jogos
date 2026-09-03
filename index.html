@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Plataforma de Jogos por Assinatura</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        background: #121212;
+        color: #fff;
+        text-align: center;
+        padding: 50px;
+      }
+      .card {
+        background: #1e1e1e;
+        padding: 20px;
+        border-radius: 8px;
+        display: inline-block;
+        width: 300px;
+        margin: 10px;
+      }
+      input {
+        width: 90%;
+        padding: 10px;
+        margin: 8px 0;
+        border-radius: 4px;
+        border: none;
+      }
+      button {
+        width: 95%;
+        padding: 10px;
+        background: #28a745;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-weight: bold;
+      }
+      button:hover {
+        background: #218838;
+      }
+      #gameArea {
+        display: none;
+        margin-top: 20px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Plataforma de Jogos</h1>
+
+    <div class="card" id="authBox">
+      <h2>Entrar / Cadastrar</h2>
+      <input type="tel" id="phone" placeholder="Celular (DDD + Número)" />
+      <input type="password" id="password" placeholder="Sua senha" />
+      <button
+        onclick="cadastrar()"
+        style="background: #007bff; margin-bottom: 10px"
+      >
+        Cadastrar Conta
+      </button>
+      <button onclick="login()">Fazer Login</button>
+    </div>
+
+    <div class="card" id="gameArea">
+      <h2>Seu Jogo</h2>
+      <p>Mensalidade: <strong style="color: #28a745">R$ 60,00/mês</strong></p>
+      <button
+        onclick="pagar()"
+        style="background: #007bff; margin-bottom: 10px"
+      >
+        Pagar Assinatura (R$ 60,00)
+      </button>
+      <button onclick="acessarJogo()">Jogar Agora</button>
+    </div>
+
+    <script>
+      async function cadastrar() {
+        const phone = document.getElementById('phone').value;
+        const password = document.getElementById('password').value;
+
+        const res = await fetch('/auth/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: 'Usuario', phone, password }),
+        });
+
+        const data = await res.json();
+        if (res.ok) {
+          alert('Conta criada com sucesso! Agora clique em Fazer Login.');
+        } else {
+          alert(data.error);
+        }
+      }
+
+      async function login() {
+        const phone = document.getElementById('phone').value;
+        const password = document.getElementById('password').value;
+
+        const res = await fetch('/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ phone, password }),
+        });
+
+        const data = await res.json();
+        if (res.ok) {
+          localStorage.setItem('token', data.token);
+          alert('Login efetuado!');
+          document.getElementById('authBox').style.display = 'none';
+          document.getElementById('gameArea').style.display = 'inline-block';
+        } else {
+          alert(data.error);
+        }
+      }
+
+      async function acessarJogo() {
+        const token = localStorage.getItem('token');
+        const res = await fetch('/game/play', {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        const data = await res.json();
+        if (res.ok) {
+          alert(data.message + '\nRedirecionando para: ' + data.gameUrl);
+          window.location.href = data.gameUrl;
+        } else {
+          alert(data.error);
+        }
+      }
+
+      async function pagar() {
+        const token = localStorage.getItem('token');
+        const res = await fetch('/payment/checkout', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        const data = await res.json();
+        alert(data.message || data.error);
+      }
+    </script>
+  </body>
+</html>
