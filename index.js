@@ -5,11 +5,12 @@ const jwt = require('jsonwebtoken');
 const { createClient } = require('@supabase/supabase-js');
 
 const app = express();
-const JWT_SECRET = 'minha_chave_secreta_jogo_60_reais';
 
-// Conexão com o Supabase
-const SUPABASE_URL = 'https://okomkzwevptbdrabqymb.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_1bRR0lQZt5Ag2POEg9IN9g_o1SC7D9y';
+// Leitura segura via variáveis de ambiente
+const JWT_SECRET = process.env.JWT_SECRET || 'minha_chave_secreta_jogo_60_reais';
+const SUPABASE_URL = process.env.SUPABASE_URL || 'https://okomkzwevptbdrabqymb.supabase.co';
+const SUPABASE_KEY = process.env.SUPABASE_KEY || 'sb_publishable_1bRR0lQZt5Ag2POEg9IN9g_o1SC7D9y';
+
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 app.use(cors());
@@ -25,14 +26,12 @@ app.get('/', (req, res) => {
 app.post('/auth/register', async (req, res) => {
   const { name, phone, password } = req.body;
 
-  // Sanitiza o número (mantém apenas dígitos)
   const cleanPhone = phone ? phone.replace(/\D/g, '') : '';
 
   if (!cleanPhone || cleanPhone.length < 10) {
     return res.status(400).json({ error: 'Número de celular inválido.' });
   }
 
-  // Validação de senha obrigatória
   if (!password || password.trim().length < 6) {
     return res
       .status(400)
@@ -41,7 +40,6 @@ app.post('/auth/register', async (req, res) => {
       });
   }
 
-  // Verifica se o celular já existe no Supabase
   const { data: existingUser } = await supabase
     .from('users')
     .select('id')
@@ -54,11 +52,9 @@ app.post('/auth/register', async (req, res) => {
 
   const hashedPassword = await bcrypt.hash(password, 8);
 
-  // Novo celular de ADMINISTRADOR configurado (com e sem o DDI 55)
   const isAdmin =
     cleanPhone === '5581919732480' || cleanPhone === '81919732480';
 
-  // Inserir novo usuário no Supabase
   const { data: newUser, error } = await supabase
     .from('users')
     .insert([
@@ -87,7 +83,6 @@ app.post('/auth/login', async (req, res) => {
   const { phone, password } = req.body;
   const cleanPhone = phone ? phone.replace(/\D/g, '') : '';
 
-  // Buscar usuário pelo celular no Supabase
   const { data: user } = await supabase
     .from('users')
     .select('*')
@@ -174,7 +169,7 @@ const requireActiveSubscription = async (req, res, next) => {
   } catch (err) {
     return res.status(401).json({ error: 'Token inválido.' });
   }
-};
+});
 
 // 4. ROTA PROTEGIDA DO JOGO
 app.get('/game/play', requireActiveSubscription, (req, res) => {
@@ -184,7 +179,8 @@ app.get('/game/play', requireActiveSubscription, (req, res) => {
   });
 });
 
-// 5. INICIALIZAÇÃO DO SERVIDOR
-app.listen(3000, () => {
-  console.log('🚀 Servidor rodando na porta 3000 e conectado ao Supabase!');
+// 5. INICIALIZAÇÃO DO SERVIDOR (Usando a porta do ambiente do Render)
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`🚀 Servidor rodando na porta ${PORT} e conectado ao Supabase!`);
 });
