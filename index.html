@@ -2,117 +2,158 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Plataforma de Jogos</title>
   <style>
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-      font-family: Arial, sans-serif;
-    }
     body {
+      font-family: Arial, sans-serif;
       background-color: #121212;
       color: #ffffff;
       display: flex;
-      flex-direction: column;
       justify-content: center;
       align-items: center;
       min-height: 100vh;
-      padding: 16px;
-    }
-    h1 {
-      margin-bottom: 20px;
-      font-size: 1.6rem;
-      text-align: center;
+      margin: 0;
     }
     .card {
       background-color: #1e1e1e;
-      padding: 20px;
+      padding: 30px;
       border-radius: 12px;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+      box-shadow: 0 4px 15px rgba(0,0,0,0.5);
       width: 100%;
       max-width: 380px;
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-    }
-    .card h2 {
-      font-size: 1.2rem;
       text-align: center;
-      margin-bottom: 8px;
     }
+    h2 { margin-bottom: 20px; }
     input {
       width: 100%;
-      padding: 14px;
+      padding: 12px;
+      margin: 8px 0;
       border-radius: 6px;
       border: 1px solid #333;
       background-color: #2a2a2a;
       color: #fff;
-      font-size: 1rem;
+      box-sizing: border-box;
     }
     button {
       width: 100%;
-      padding: 14px;
+      padding: 12px;
+      margin-top: 12px;
       border-radius: 6px;
       border: none;
-      font-size: 1rem;
       font-weight: bold;
       cursor: pointer;
-      margin-top: 4px;
+      font-size: 16px;
     }
-    .btn-register {
-      background-color: #007bff;
-      color: #fff;
+    .btn-primary { background-color: #007bff; color: white; }
+    .btn-success { background-color: #28a745; color: white; }
+    .btn-pay { 
+      background-color: #ff9900; 
+      color: white; 
+      text-decoration: none; 
+      display: block; 
+      line-height: 44px;
+      border-radius: 6px;
+      font-weight: bold;
+      margin-top: 12px;
+      margin-bottom: 12px;
     }
-    .btn-login {
-      background-color: #28a745;
-      color: #fff;
+    .switch-mode {
+      margin-top: 15px;
+      font-size: 14px;
+      color: #aaa;
+      cursor: pointer;
+      text-decoration: underline;
     }
+    .hidden { display: none; }
   </style>
 </head>
 <body>
 
-  <h1>Plataforma de Jogos</h1>
+  <div class="card" id="authBox">
+    <h2 id="formTitle">Login</h2>
+    <input type="text" id="phoneInput" placeholder="Celular (ex: 81999999999)" />
+    <input type="password" id="passwordInput" placeholder="Senha" />
+    <input type="text" id="nameInput" placeholder="Seu Nome" class="hidden" />
 
-  <div class="card">
-    <h2>Entrar / Cadastrar</h2>
-    <input type="tel" id="phone" placeholder="Celular (DDD + Número)">
-    <input type="password" id="password" placeholder="Sua senha">
-    <button class="btn-register" onclick="register()">Cadastrar Conta</button>
-    <button class="btn-login" onclick="login()">Fazer Login</button>
+    <button id="authBtn" class="btn-primary" onclick="handleAuth()">Entrar</button>
+    
+    <div class="switch-mode" id="toggleModeBtn" onclick="toggleMode()">
+      Não tem conta? Cadastre-se
+    </div>
+  </div>
+
+  <div class="card hidden" id="gameArea">
+    <h2>Seu Jogo</h2>
+    <p>Mensalidade: <strong style="color: #28a745;">R$ 60,00/mês</strong></p>
+    
+    <a id="payBtn" href="https://pay.kiwify.com.br/ry6ATnk" target="_blank" class="btn-pay">Pagar Assinatura (R$ 60,00)</a>
+    
+    <button class="btn-success" onclick="playGame()">Jogar Agora</button>
+    <button style="background-color: #dc3545; color: white;" onclick="logout()">Sair</button>
   </div>
 
   <script>
-    async function register() {
-      const phone = document.getElementById('phone').value;
-      const password = document.getElementById('password').value;
+    let isRegisterMode = false;
 
-      const res = await fetch('/auth/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: 'Usuário', phone, password })
-      });
-      const data = await res.json();
-      alert(data.message || data.error);
+    function toggleMode() {
+      isRegisterMode = !isRegisterMode;
+      document.getElementById('formTitle').innerText = isRegisterMode ? 'Cadastro' : 'Login';
+      document.getElementById('authBtn').innerText = isRegisterMode ? 'Cadastrar' : 'Entrar';
+      document.getElementById('nameInput').classList.toggle('hidden', !isRegisterMode);
+      document.getElementById('toggleModeBtn').innerText = isRegisterMode 
+        ? 'Já tem conta? Faça Login' 
+        : 'Não tem conta? Cadastre-se';
     }
 
-    async function login() {
-      const phone = document.getElementById('phone').value;
-      const password = document.getElementById('password').value;
+    async function handleAuth() {
+      const phone = document.getElementById('phoneInput').value;
+      const password = document.getElementById('passwordInput').value;
+      const name = document.getElementById('nameInput').value;
 
-      const res = await fetch('/auth/login', {
+      const endpoint = isRegisterMode ? '/auth/register' : '/auth/login';
+      const bodyData = isRegisterMode ? { name, phone, password } : { phone, password };
+
+      const response = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone, password })
+        body: JSON.stringify(bodyData)
       });
-      const data = await res.json();
-      if (data.token) {
-        localStorage.setItem('token', data.token);
-        window.location.href = '/game.html';
+
+      const data = await response.json();
+
+      if (response.ok) {
+        if (!isRegisterMode) {
+          localStorage.setItem('token', data.token);
+          document.getElementById('authBox').classList.add('hidden');
+          document.getElementById('gameArea').classList.remove('hidden');
+        } else {
+          alert('Cadastro realizado! Faça login para continuar.');
+          toggleMode();
+        }
       } else {
-        alert(data.error);
+        alert(data.error || 'Erro na operação.');
       }
+    }
+
+    async function playGame() {
+      const token = localStorage.getItem('token');
+      const response = await fetch('/game/play', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        window.location.href = data.gameUrl;
+      } else {
+        alert(data.error || 'Assinatura ativa necessária para jogar.');
+      }
+    }
+
+    function logout() {
+      localStorage.removeItem('token');
+      location.reload();
     }
   </script>
 </body>
