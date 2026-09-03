@@ -6,7 +6,7 @@ const { createClient } = require('@supabase/supabase-js');
 
 const app = express();
 
-// Leitura segura via variáveis de ambiente
+// Variáveis de ambiente
 const JWT_SECRET = process.env.JWT_SECRET || 'minha_chave_secreta_jogo_60_reais';
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://okomkzwevptbdrabqymb.supabase.co';
 const SUPABASE_KEY = process.env.SUPABASE_KEY || 'sb_publishable_1bRR0lQZt5Ag2POEg9IN9g_o1SC7D9y';
@@ -17,15 +17,14 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(__dirname));
 
-// ROTA RAIZ
+// Rota Raiz
 app.get('/', (req, res) => {
   res.sendFile(__dirname + '/index.html');
 });
 
-// 1. ROTA DE CADASTRO COM CELULAR
+// 1. ROTA DE CADASTRO
 app.post('/auth/register', async (req, res) => {
   const { name, phone, password } = req.body;
-
   const cleanPhone = phone ? phone.replace(/\D/g, '') : '';
 
   if (!cleanPhone || cleanPhone.length < 10) {
@@ -33,17 +32,13 @@ app.post('/auth/register', async (req, res) => {
   }
 
   if (!password || password.trim().length < 6) {
-    return res
-      .status(400)
-      .json({
-        error: 'A senha é obrigatória e deve ter pelo menos 6 caracteres.',
-      });
+    return res.status(400).json({ error: 'A senha deve ter no mínimo 6 caracteres.' });
   }
 
   const { data: existingUser } = await supabase
     .from('users')
     .select('id')
-    .eq('phone', cleanPhone)
+    .eq('phone', cleanPhone')
     .single();
 
   if (existingUser) {
@@ -51,9 +46,7 @@ app.post('/auth/register', async (req, res) => {
   }
 
   const hashedPassword = await bcrypt.hash(password, 8);
-
-  const isAdmin =
-    cleanPhone === '5581919732480' || cleanPhone === '81919732480';
+  const isAdmin = cleanPhone === '5581919732480' || cleanPhone === '81919732480';
 
   const { data: newUser, error } = await supabase
     .from('users')
@@ -73,12 +66,10 @@ app.post('/auth/register', async (req, res) => {
     return res.status(500).json({ error: 'Erro ao cadastrar usuário.' });
   }
 
-  return res
-    .status(201)
-    .json({ message: 'Usuário cadastrado com sucesso!', userId: newUser.id });
+  return res.status(201).json({ message: 'Usuário cadastrado com sucesso!', userId: newUser.id });
 });
 
-// 2. ROTA DE LOGIN COM CELULAR
+// 2. ROTA DE LOGIN
 app.post('/auth/login', async (req, res) => {
   const { phone, password } = req.body;
   const cleanPhone = phone ? phone.replace(/\D/g, '') : '';
@@ -107,42 +98,38 @@ app.post('/auth/login', async (req, res) => {
   });
 });
 
-// ROTA DE SIMULAÇÃO DE PAGAMENTO
-app.post('/payment/checkout', async (req, res) => {
-  const authHeader = req.headers.authorization;
-  if (!authHeader)
-    return res.status(401).json({ error: 'Token não fornecido.' });
-
-  const [, token] = authHeader.split(' ');
-
+// 3. WEBHOOK DA KIWIFY (Aprovação Automática)
+app.post('/webhook/kiwify', async (req, res) => {
   try {
-    const decoded = jwt.verify(token, JWT_SECRET);
+    const { order_status, Customer } = req.body;
 
-    const { data: user, error } = await supabase
-      .from('users')
-      .update({ subscription_status: 'ACTIVE' })
-      .eq('id', decoded.id)
-      .select()
-      .single();
+    // Verifica se a compra foi paga/aprovada
+    if (order_status === 'paid' && Customer) {
+      const rawPhone = Customer.mobile || Customer.phone || '';
+      const cleanPhone = rawPhone.replace(/\D/g, '');
 
-    if (error || !user) {
-      return res.status(404).json({ error: 'Usuário não encontrado.' });
+      if (cleanPhone) {
+        // Atualiza o status do usuário para ACTIVE no Supabase
+        await supabase
+          .from('users')
+          .update({ subscription_status: 'ACTIVE' })
+          .eq('phone', cleanPhone);
+
+        console.log(`✅ Assinatura ativada via Kiwify para o celular: ${cleanPhone}`);
+      }
     }
 
-    return res.json({
-      message: 'Pagamento de R$ 60,00 recebido com sucesso! Assinatura ATIVA.',
-      status: user.subscription_status,
-    });
+    return res.status(200).json({ received: true });
   } catch (err) {
-    return res.status(401).json({ error: 'Token inválido.' });
+    console.error('Erro no Webhook da Kiwify:', err);
+    return res.status(500).json({ error: 'Erro interno ao processar webhook' });
   }
 });
 
-// 3. MIDDLEWARE DE PROTEÇÃO
+// 4. MIDDLEWARE DE PROTEÇÃO DE ACESSO
 const requireActiveSubscription = async (req, res, next) => {
   const authHeader = req.headers.authorization;
-  if (!authHeader)
-    return res.status(401).json({ error: 'Token não fornecido.' });
+  if (!authHeader) return res.status(401).json({ error: 'Token não fornecido.' });
 
   const [, token] = authHeader.split(' ');
 
@@ -155,32 +142,29 @@ const requireActiveSubscription = async (req, res, next) => {
       .eq('id', decoded.id)
       .single();
 
-    if (!user)
-      return res.status(404).json({ error: 'Usuário não encontrado.' });
+    if (!user) return res.status(404).json({ error: 'Usuário não encontrado.' });
 
     if (user.role === 'ADMIN' || user.subscription_status === 'ACTIVE') {
       req.user = user;
       return next();
     }
 
-    return res
-      .status(403)
-      .json({ error: 'Assinatura de R$ 60,00/mês necessária para jogar.' });
+    return res.status(403).json({ error: 'Assinatura ativa necessária para jogar.' });
   } catch (err) {
     return res.status(401).json({ error: 'Token inválido.' });
   }
-});
+};
 
-// 4. ROTA PROTEGIDA DO JOGO
+// 5. ROTA PROTEGIDA DOS JOGOS
 app.get('/game/play', requireActiveSubscription, (req, res) => {
   return res.json({
-    message: 'Acesso liberado! Redirecionando para o jogo...',
+    message: 'Acesso liberado!',
     gameUrl: '/game.html',
   });
 });
 
-// 5. INICIALIZAÇÃO DO SERVIDOR (Usando a porta do ambiente do Render)
+// Inicialização do Servidor
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`🚀 Servidor rodando na porta ${PORT} e conectado ao Supabase!`);
+  console.log(`🚀 Servidor rodando na porta ${PORT}`);
 });
