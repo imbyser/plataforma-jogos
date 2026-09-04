@@ -3,202 +3,118 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Plataforma de Jogos - Área de Jogo</title>
+    <title>Plataforma de Jogos - Jogo da Memória</title>
     <style>
-        body { font-family: sans-serif; background-color: #1a1a1a; color: white; text-align: center; margin: 0; padding: 20px; }
-        .nav-header { display: flex; justify-content: space-between; align-items: center; background-color: #333; padding: 10px 20px; border-radius: 8px; margin-bottom: 20px; }
-        .nav-header h2 { margin: 0; }
-        .game-controls button { background-color: #4CAF50; color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer; margin-left: 10px; font-size: 14px;}
-        .game-controls button.active { background-color: #2e7d32; font-weight: bold; }
-        .game-controls button:hover { background-color: #45a049; }
-        .game-section { display: none; margin-top: 20px; }
-        .game-section.active { display: block; }
+        body { 
+            font-family: sans-serif; 
+            background-color: #1a1a1a; 
+            color: white; 
+            text-align: center; 
+            margin: 0; 
+            padding: 20px; 
+        }
 
-        /* Estilos Cobrinha */
-        #gameCanvas { background-color: #000; border: 2px solid #555; display: block; margin: 20px auto; }
-        
-        /* Estilos Memória */
-        #memory-grid { display: grid; grid-template-columns: repeat(4, 80px); gap: 10px; justify-content: center; margin-top: 20px; }
-        .card { width: 80px; height: 80px; background-color: #444; border-radius: 8px; cursor: pointer; display: flex; justify-content: center; align-items: center; font-size: 2em; color: transparent; user-select: none; transition: background-color 0.3s; }
-        .card.flipped { background-color: #fff; color: #333; cursor: default; }
-        .card.matched { background-color: #2e7d32; color: #fff; cursor: default; animation: pulse 0.5s; }
-        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
+        .nav-header { 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            background-color: #333; 
+            padding: 10px 20px; 
+            border-radius: 8px; 
+            margin-bottom: 20px; 
+        }
 
-        /* Botão Reiniciar Genérico */
-        .restart-btn { background-color: #f44336; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; margin-top: 15px; font-size: 16px; display: none; }
-        .restart-btn.show { display: inline-block; }
-        .restart-btn:hover { background-color: #d32f2f; }
+        .nav-header h2 { 
+            margin: 0; 
+        }
+
+        /* Estilos do Jogo da Memória */
+        #memory-grid { 
+            display: grid; 
+            grid-template-columns: repeat(4, 80px); 
+            gap: 10px; 
+            justify-content: center; 
+            margin-top: 20px; 
+        }
+
+        .card { 
+            width: 80px; 
+            height: 80px; 
+            background-color: #444; 
+            border-radius: 8px; 
+            cursor: pointer; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            font-size: 2em; 
+            color: transparent; 
+            user-select: none; 
+            transition: background-color 0.3s; 
+        }
+
+        .card.flipped { 
+            background-color: #fff; 
+            color: #333; 
+            cursor: default; 
+        }
+
+        .card.matched { 
+            background-color: #2e7d32; 
+            color: #fff; 
+            cursor: default; 
+            animation: pulse 0.5s; 
+        }
+
+        @keyframes pulse { 
+            0% { transform: scale(1); } 
+            50% { transform: scale(1.1); } 
+            100% { transform: scale(1); } 
+        }
+
+        /* Botão Reiniciar */
+        .restart-btn { 
+            background-color: #f44336; 
+            color: white; 
+            border: none; 
+            padding: 10px 20px; 
+            border-radius: 5px; 
+            cursor: pointer; 
+            margin-top: 20px; 
+            font-size: 16px; 
+            display: none; 
+        }
+
+        .restart-btn.show { 
+            display: inline-block; 
+        }
+
+        .restart-btn:hover { 
+            background-color: #d32f2f; 
+        }
     </style>
 </head>
 <body>
 
     <div class="nav-header">
         <h2>Área de Jogos</h2>
-        <div class="game-controls">
-            <button id="btn-cobrinha" class="active">Jogo da Cobrinha</button>
-            <button id="btn-memoria">Jogo da Memória</button>
-        </div>
-    </div>
-
-    <!-- SEÇÃO DO JOGO DA COBRINHA -->
-    <div id="section-cobrinha" class="game-section active">
-        <h3>Jogo da Cobrinha</h3>
-        <p>Use as setas do teclado para jogar.</p>
-        <canvas id="gameCanvas" width="400" height="400"></canvas>
-        <!-- Problema 1 Solucionado: Botão de reinício manual -->
-        <button id="restart-cobrinha" class="restart-btn">Reiniciar Jogo (Cobrinha)</button>
     </div>
 
     <!-- SEÇÃO DO JOGO DA MEMÓRIA -->
-    <div id="section-memoria" class="game-section">
+    <div id="section-memoria">
         <h3>Jogo da Memória</h3>
         <p>Encontre os pares de emoticons.</p>
+        
         <div id="memory-grid">
             <!-- Cartas geradas via JS -->
         </div>
-        <!-- Problema 3 Solucionado: Botão de reinício manual para memória -->
-        <button id="restart-memoria" class="restart-btn">Reiniciar Jogo (Memória)</button>
+
+        <button id="restart-memoria" class="restart-btn">Reiniciar Jogo</button>
     </div>
 
     <script>
-        // --- 1. LÓGICA DE NAVEGAÇÃO/TROCA DE JOGOS (Correção Problema 2) ---
-        const btnCobrinha = document.getElementById('btn-cobrinha');
-        const btnMemoria = document.getElementById('btn-memoria');
-        const secCobrinha = document.getElementById('section-cobrinha');
-        const secMemoria = document.getElementById('section-memoria');
-
-        function showGame(gameName) {
-            // Remove classe active de tudo
-            btnCobrinha.classList.remove('active');
-            btnMemoria.classList.remove('active');
-            secCobrinha.classList.remove('active');
-            secMemoria.classList.remove('active');
-
-            // Para o loop da cobrinha se mudar de jogo
-            if(gameLoop) clearInterval(gameLoop);
-
-            if (gameName === 'cobrinha') {
-                btnCobrinha.classList.add('active');
-                secCobrinha.classList.add('active');
-                startCobrinha(); // Reinicia o loop quando volta
-            } else if (gameName === 'memoria') {
-                btnMemoria.classList.add('active');
-                secMemoria.classList.add('active');
-                startMemoryGame(); // Inicia o jogo da memória
-            }
-        }
-
-        btnCobrinha.addEventListener('click', () => showGame('cobrinha'));
-        btnMemoria.addEventListener('click', () => showGame('memoria'));
-
-
-        // --- 2. LÓGICA JOGO DA COBRINHA (Correção Problema 1) ---
-        const canvas = document.getElementById('gameCanvas');
-        const ctx = canvas.getContext('2d');
-        const restartCobrinhaBtn = document.getElementById('restart-cobrinha');
-        
-        const gridSize = 20;
-        const tileCount = canvas.width / gridSize;
-        
-        let score = 0;
-        let snake = [];
-        let food = {};
-        let dx = 0;
-        let dy = 0;
-        let gameLoop;
-        let isGameOver = false;
-
-        function initCobrinha() {
-            snake = [{ x: 10, y: 10 }];
-            placeFood();
-            dx = 0;
-            dy = 0;
-            score = 0;
-            isGameOver = false;
-            restartCobrinhaBtn.classList.remove('show');
-        }
-
-        function placeFood() {
-            food = {
-                x: Math.floor(Math.random() * tileCount),
-                y: Math.floor(Math.random() * tileCount)
-            };
-        }
-
-        function draw() {
-            if (isGameOver) return;
-
-            // Mover cobra
-            const head = { x: snake[0].x + dx, y: snake[0].y + dy };
-            
-            // Ver colisão com bordas
-            if (head.x < 0 || head.x >= tileCount || head.y < 0 || head.y >= tileCount) {
-                gameOverCobrinha();
-                return;
-            }
-
-            // Ver colisão com próprio corpo
-            for (let i = 1; i < snake.length; i++) {
-                if (snake[i].x === head.x && snake[i].y === head.y) {
-                    gameOverCobrinha();
-                    return;
-                }
-            }
-
-            snake.unshift(head);
-
-            // Ver colisão com comida
-            if (head.x === food.x && head.y === food.y) {
-                score++;
-                placeFood();
-            } else {
-                snake.pop();
-            }
-
-            // Desenhar fundo
-            ctx.fillStyle = 'black';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-            // Desenhar cobra
-            ctx.fillStyle = 'lime';
-            snake.forEach(part => ctx.fillRect(part.x * gridSize, part.y * gridSize, gridSize - 2, gridSize - 2));
-
-            // Desenhar comida
-            ctx.fillStyle = 'red';
-            ctx.fillRect(food.x * gridSize, food.y * gridSize, gridSize - 2, gridSize - 2);
-        }
-
-        function gameOverCobrinha() {
-            isGameOver = true;
-            clearInterval(gameLoop);
-            // CORREÇÃO: Alerta simples, sem reset automático
-            alert(`Fim de Jogo (Cobrinha)! Pontuação: ${score}`);
-            // Mostra o botão de reiniciar manual
-            restartCobrinhaBtn.classList.add('show');
-        }
-
-        function startCobrinha() {
-            initCobrinha();
-            gameLoop = setInterval(draw, 100);
-        }
-
-        // Evento do botão reiniciar manual da cobrinha
-        restartCobrinhaBtn.addEventListener('click', startCobrinha);
-
-        document.addEventListener('keydown', e => {
-            if (isGameOver) return;
-            switch (e.key) {
-                case 'ArrowUp': if (dy === 0) { dx = 0; dy = -1; } break;
-                case 'ArrowDown': if (dy === 0) { dx = 0; dy = 1; } break;
-                case 'ArrowLeft': if (dx === 0) { dx = -1; dy = 0; } break;
-                case 'ArrowRight': if (dx === 0) { dx = 1; dy = 0; } break;
-            }
-        });
-
-
-        // --- 3. LÓGICA JOGO DA MEMÓRIA (Correção Problema 3) ---
         const grid = document.getElementById('memory-grid');
         const restartMemoriaBtn = document.getElementById('restart-memoria');
+        
         // Pares de emoticons
         const items = ['🍕', '🍕', '🚗', '🚗', '🎈', '🎈', '🍦', '🍦', '🎸', '🎸', '🐶', '🐶', '🏀', '🏀', '💡', '💡'];
         
@@ -235,13 +151,13 @@
             this.classList.add('flipped');
 
             if (!hasFlippedCard) {
-                // primeiro clique
+                // Primeiro clique
                 hasFlippedCard = true;
                 firstCard = this;
                 return;
             }
 
-            // segundo clique
+            // Segundo clique
             secondCard = this;
             checkForMatch();
         }
@@ -264,7 +180,6 @@
             if (matchesFound === items.length / 2) {
                 setTimeout(() => {
                     alert('Parabéns! Você encontrou todos os pares do Jogo da Memória.');
-                    // Mostra o botão reiniciar manual da memória
                     restartMemoriaBtn.classList.add('show');
                 }, 500);
             }
@@ -290,14 +205,11 @@
             createBoard();
         }
 
-        // Evento do botão reiniciar manual da memória
+        // Evento do botão reiniciar manual
         restartMemoriaBtn.addEventListener('click', startMemoryGame);
 
-
-        // --- INICIALIZAÇÃO PADRÃO ---
-        // Começa com a Cobrinha ativa
-        startCobrinha();
-
+        // Inicializa o jogo ao carregar a página
+        startMemoryGame();
     </script>
 </body>
 </html>
