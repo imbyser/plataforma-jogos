@@ -6,24 +6,25 @@
     <title>Plataforma de Jogos - Área de Jogo</title>
     <style>
         body { font-family: sans-serif; background-color: #1a1a1a; color: white; text-align: center; margin: 0; padding: 20px; }
-        .nav-header { display: flex; justify-content: space-between; align-items: center; background-color: #333; padding: 10px 20px; border-radius: 8px; margin-bottom: 20px; flex-wrap: wrap; gap: 10px; }
+        .nav-header { display: flex; justify-content: space-between; align-items: center; background-color: #333; padding: 10px 20px; border-radius: 8px; margin-bottom: 20px; }
         .nav-header h2 { margin: 0; }
-        .game-controls button { background-color: #4CAF50; color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer; margin: 2px; font-size: 14px;}
+        .game-controls button { background-color: #4CAF50; color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer; margin-left: 10px; font-size: 14px;}
         .game-controls button.active { background-color: #2e7d32; font-weight: bold; }
         .game-controls button:hover { background-color: #45a049; }
         .game-section { display: none; margin-top: 20px; }
         .game-section.active { display: block; }
 
-        /* Estilos do Canvas dos Jogos */
-        canvas { background-color: #000; border: 2px solid #555; display: block; margin: 20px auto; max-width: 100%; }
+        /* Estilos Cobrinha */
+        #gameCanvas { background-color: #000; border: 2px solid #555; display: block; margin: 20px auto; }
         
-        /* Estilos Jogo da Memória */
+        /* Estilos Memória */
         #memory-grid { display: grid; grid-template-columns: repeat(4, 80px); gap: 10px; justify-content: center; margin-top: 20px; }
         .card { width: 80px; height: 80px; background-color: #444; border-radius: 8px; cursor: pointer; display: flex; justify-content: center; align-items: center; font-size: 2em; color: transparent; user-select: none; transition: background-color 0.3s; }
         .card.flipped { background-color: #fff; color: #333; cursor: default; }
-        .card.matched { background-color: #2e7d32; color: #fff; cursor: default; }
+        .card.matched { background-color: #2e7d32; color: #fff; cursor: default; animation: pulse 0.5s; }
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
 
-        /* Botões de Reinício */
+        /* Botão Reiniciar Genérico */
         .restart-btn { background-color: #f44336; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; margin-top: 15px; font-size: 16px; display: none; }
         .restart-btn.show { display: inline-block; }
         .restart-btn:hover { background-color: #d32f2f; }
@@ -34,309 +35,192 @@
     <div class="nav-header">
         <h2>Área de Jogos</h2>
         <div class="game-controls">
-            <button id="btn-flappy" class="active">Flappy Bird (R$ 50)</button>
-            <button id="btn-nave">Jogo da Nave (R$ 100)</button>
-            <button id="btn-memoria">Jogo da Memória (R$ 150)</button>
+            <button id="btn-cobrinha" class="active">Jogo da Cobrinha</button>
+            <button id="btn-memoria">Jogo da Memória</button>
         </div>
     </div>
 
-    <!-- 1. JOGO FLAPPY BIRD -->
-    <div id="section-flappy" class="game-section active">
-        <h3>Flappy Bird</h3>
-        <p>Pressione a <strong>Barra de Espaço</strong> ou <strong>Clique na Tela</strong> para saltar.</p>
-        <canvas id="flappyCanvas" width="360" height="480"></canvas>
-        <button id="restart-flappy" class="restart-btn">Reiniciar Flappy Bird</button>
+    <!-- SEÇÃO DO JOGO DA COBRINHA -->
+    <div id="section-cobrinha" class="game-section active">
+        <h3>Jogo da Cobrinha</h3>
+        <p>Use as setas do teclado para jogar.</p>
+        <canvas id="gameCanvas" width="400" height="400"></canvas>
+        <!-- Problema 1 Solucionado: Botão de reinício manual -->
+        <button id="restart-cobrinha" class="restart-btn">Reiniciar Jogo (Cobrinha)</button>
     </div>
 
-    <!-- 2. JOGO DA NAVE -->
-    <div id="section-nave" class="game-section">
-        <h3>Jogo da Nave</h3>
-        <p>Use as <strong>Setas (Esquerda/Direita)</strong> para mover e <strong>Barra de Espaço</strong> para atirar.</p>
-        <canvas id="naveCanvas" width="400" height="400"></canvas>
-        <button id="restart-nave" class="restart-btn">Reiniciar Jogo da Nave</button>
-    </div>
-
-    <!-- 3. JOGO DA MEMÓRIA -->
+    <!-- SEÇÃO DO JOGO DA MEMÓRIA -->
     <div id="section-memoria" class="game-section">
         <h3>Jogo da Memória</h3>
-        <p>Encontre todos os pares de emoticons.</p>
-        <div id="memory-grid"></div>
-        <button id="restart-memoria" class="restart-btn">Reiniciar Jogo da Memória</button>
+        <p>Encontre os pares de emoticons.</p>
+        <div id="memory-grid">
+            <!-- Cartas geradas via JS -->
+        </div>
+        <!-- Problema 3 Solucionado: Botão de reinício manual para memória -->
+        <button id="restart-memoria" class="restart-btn">Reiniciar Jogo (Memória)</button>
     </div>
 
     <script>
-        // --- GERENCIADOR DE NAVEGAÇÃO DOS JOGOS ---
-        const btnFlappy = document.getElementById('btn-flappy');
-        const btnNave = document.getElementById('btn-nave');
+        // --- 1. LÓGICA DE NAVEGAÇÃO/TROCA DE JOGOS (Correção Problema 2) ---
+        const btnCobrinha = document.getElementById('btn-cobrinha');
         const btnMemoria = document.getElementById('btn-memoria');
-
-        const secFlappy = document.getElementById('section-flappy');
-        const secNave = document.getElementById('section-nave');
+        const secCobrinha = document.getElementById('section-cobrinha');
         const secMemoria = document.getElementById('section-memoria');
 
-        function stopAllGames() {
-            if (flappyLoop) cancelAnimationFrame(flappyLoop);
-            if (naveLoop) cancelAnimationFrame(naveLoop);
-        }
-
         function showGame(gameName) {
-            stopAllGames();
-            
-            btnFlappy.classList.remove('active');
-            btnNave.classList.remove('active');
+            // Remove classe active de tudo
+            btnCobrinha.classList.remove('active');
             btnMemoria.classList.remove('active');
-
-            secFlappy.classList.remove('active');
-            secNave.classList.remove('active');
+            secCobrinha.classList.remove('active');
             secMemoria.classList.remove('active');
 
-            if (gameName === 'flappy') {
-                btnFlappy.classList.add('active');
-                secFlappy.classList.add('active');
-                startFlappy();
-            } else if (gameName === 'nave') {
-                btnNave.classList.add('active');
-                secNave.classList.add('active');
-                startNave();
+            // Para o loop da cobrinha se mudar de jogo
+            if(gameLoop) clearInterval(gameLoop);
+
+            if (gameName === 'cobrinha') {
+                btnCobrinha.classList.add('active');
+                secCobrinha.classList.add('active');
+                startCobrinha(); // Reinicia o loop quando volta
             } else if (gameName === 'memoria') {
                 btnMemoria.classList.add('active');
                 secMemoria.classList.add('active');
-                startMemoryGame();
+                startMemoryGame(); // Inicia o jogo da memória
             }
         }
 
-        btnFlappy.addEventListener('click', () => showGame('flappy'));
-        btnNave.addEventListener('click', () => showGame('nave'));
+        btnCobrinha.addEventListener('click', () => showGame('cobrinha'));
         btnMemoria.addEventListener('click', () => showGame('memoria'));
 
 
-        // --- 1. LÓGICA FLAPPY BIRD ---
-        const canvasF = document.getElementById('flappyCanvas');
-        const ctxF = canvasF.getContext('2d');
-        const restartFlappyBtn = document.getElementById('restart-flappy');
+        // --- 2. LÓGICA JOGO DA COBRINHA (Correção Problema 1) ---
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const restartCobrinhaBtn = document.getElementById('restart-cobrinha');
+        
+        const gridSize = 20;
+        const tileCount = canvas.width / gridSize;
+        
+        let score = 0;
+        let snake = [];
+        let food = {};
+        let dx = 0;
+        let dy = 0;
+        let gameLoop;
+        let isGameOver = false;
 
-        let bird, pipes, frameF, scoreF, flappyLoop, isFlappyOver;
-
-        function initFlappy() {
-            bird = { x: 50, y: 150, width: 20, height: 20, gravity: 0.35, jump: -6.5, velocity: 0 };
-            pipes = [];
-            frameF = 0;
-            scoreF = 0;
-            isFlappyOver = false;
-            restartFlappyBtn.classList.remove('show');
+        function initCobrinha() {
+            snake = [{ x: 10, y: 10 }];
+            placeFood();
+            dx = 0;
+            dy = 0;
+            score = 0;
+            isGameOver = false;
+            restartCobrinhaBtn.classList.remove('show');
         }
 
-        function updateFlappy() {
-            if (isFlappyOver) return;
+        function placeFood() {
+            food = {
+                x: Math.floor(Math.random() * tileCount),
+                y: Math.floor(Math.random() * tileCount)
+            };
+        }
 
-            bird.velocity += bird.gravity;
-            bird.y += bird.velocity;
+        function draw() {
+            if (isGameOver) return;
 
-            // Colisão com chão e teto
-            if (bird.y + bird.height >= canvasF.height || bird.y <= 0) {
-                gameOverFlappy();
+            // Mover cobra
+            const head = { x: snake[0].x + dx, y: snake[0].y + dy };
+            
+            // Ver colisão com bordas
+            if (head.x < 0 || head.x >= tileCount || head.y < 0 || head.y >= tileCount) {
+                gameOverCobrinha();
                 return;
             }
 
-            // Gerar canos
-            if (frameF % 100 === 0) {
-                let gap = 120;
-                let topHeight = Math.floor(Math.random() * (canvasF.height - gap - 100)) + 30;
-                pipes.push({ x: canvasF.width, top: topHeight, bottom: canvasF.height - topHeight - gap, passed: false });
+            // Ver colisão com próprio corpo
+            for (let i = 1; i < snake.length; i++) {
+                if (snake[i].x === head.x && snake[i].y === head.y) {
+                    gameOverCobrinha();
+                    return;
+                }
             }
 
-            // Mover e checar colisão dos canos
-            pipes.forEach(pipe => {
-                pipe.x -= 2;
+            snake.unshift(head);
 
-                // Colisão
-                if (bird.x < pipe.x + 40 && bird.x + bird.width > pipe.x &&
-                   (bird.y < pipe.top || bird.y + bird.height > canvasF.height - pipe.bottom)) {
-                    gameOverFlappy();
-                }
-
-                // Pontuação
-                if (pipe.x + 40 < bird.x && !pipe.passed) {
-                    scoreF++;
-                    pipe.passed = true;
-                }
-            });
-
-            // Remover canos fora da tela
-            pipes = pipes.filter(pipe => pipe.x > -40);
-
-            drawFlappy();
-            frameF++;
-            flappyLoop = requestAnimationFrame(updateFlappy);
-        }
-
-        function drawFlappy() {
-            ctxF.fillStyle = '#70c5ce'; // Fundo Céu
-            ctxF.fillRect(0, 0, canvasF.width, canvasF.height);
-
-            // Desenhar Pássaro
-            ctxF.fillStyle = '#ffeb3b';
-            ctxF.fillRect(bird.x, bird.y, bird.width, bird.height);
-
-            // Desenhar Canos
-            ctxF.fillStyle = '#2e7d32';
-            pipes.forEach(pipe => {
-                ctxF.fillRect(pipe.x, 0, 40, pipe.top);
-                ctxF.fillRect(pipe.x, canvasF.height - pipe.bottom, 40, pipe.bottom);
-            });
-
-            // Desenhar Placar
-            ctxF.fillStyle = '#fff';
-            ctxF.font = '20px sans-serif';
-            ctxF.fillText(`Pontos: ${scoreF}`, 10, 30);
-        }
-
-        function gameOverFlappy() {
-            isFlappyOver = true;
-            cancelAnimationFrame(flappyLoop);
-            alert(`Fim de jogo no Flappy Bird! Pontuação: ${scoreF}`);
-            restartFlappyBtn.classList.add('show');
-        }
-
-        function startFlappy() {
-            initFlappy();
-            updateFlappy();
-        }
-
-        function flap() {
-            if (!isFlappyOver && secFlappy.classList.contains('active')) {
-                bird.velocity = bird.jump;
-            }
-        }
-
-        restartFlappyBtn.addEventListener('click', startFlappy);
-        window.addEventListener('keydown', e => { if (e.code === 'Space') flap(); });
-        canvasF.addEventListener('click', flap);
-
-
-        // --- 2. LÓGICA JOGO DA NAVE ---
-        const canvasN = document.getElementById('naveCanvas');
-        const ctxN = canvasN.getContext('2d');
-        const restartNaveBtn = document.getElementById('restart-nave');
-
-        let nave, bullets, enemies, scoreN, naveLoop, isNaveOver;
-        let keysNave = {};
-
-        function initNave() {
-            nave = { x: 180, y: 360, width: 30, height: 20, speed: 5 };
-            bullets = [];
-            enemies = [];
-            scoreN = 0;
-            isNaveOver = false;
-            restartNaveBtn.classList.remove('show');
-        }
-
-        function updateNave() {
-            if (isNaveOver) return;
-
-            if (keysNave['ArrowLeft'] && nave.x > 0) nave.x -= nave.speed;
-            if (keysNave['ArrowRight'] && nave.x < canvasN.width - nave.width) nave.x += nave.speed;
-
-            // Movimentar Balas
-            bullets.forEach(b => b.y -= 7);
-            bullets = bullets.filter(b => b.y > 0);
-
-            // Gerar Inimigos
-            if (Math.random() < 0.03) {
-                enemies.push({ x: Math.random() * (canvasN.width - 20), y: 0, width: 20, height: 20, speed: 2 });
+            // Ver colisão com comida
+            if (head.x === food.x && head.y === food.y) {
+                score++;
+                placeFood();
+            } else {
+                snake.pop();
             }
 
-            // Movimentar Inimigos e Tratar Colisões
-            enemies.forEach((enemy, eIdx) => {
-                enemy.y += enemy.speed;
+            // Desenhar fundo
+            ctx.fillStyle = 'black';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-                // Colisão com a nave
-                if (enemy.x < nave.x + nave.width && enemy.x + enemy.width > nave.x &&
-                    enemy.y < nave.y + nave.height && enemy.y + enemy.height > nave.y) {
-                    gameOverNave();
-                }
+            // Desenhar cobra
+            ctx.fillStyle = 'lime';
+            snake.forEach(part => ctx.fillRect(part.x * gridSize, part.y * gridSize, gridSize - 2, gridSize - 2));
 
-                // Colisão com balas
-                bullets.forEach((bullet, bIdx) => {
-                    if (bullet.x < enemy.x + enemy.width && bullet.x + 4 > enemy.x &&
-                        bullet.y < enemy.y + enemy.height && bullet.y + 10 > enemy.y) {
-                        enemies.splice(eIdx, 1);
-                        bullets.splice(bIdx, 1);
-                        scoreN += 10;
-                    }
-                });
-            });
-
-            // Remover inimigos fora da tela
-            enemies = enemies.filter(e => e.y < canvasN.height);
-
-            drawNave();
-            naveLoop = requestAnimationFrame(updateNave);
+            // Desenhar comida
+            ctx.fillStyle = 'red';
+            ctx.fillRect(food.x * gridSize, food.y * gridSize, gridSize - 2, gridSize - 2);
         }
 
-        function drawNave() {
-            ctxN.fillStyle = '#000';
-            ctxN.fillRect(0, 0, canvasN.width, canvasN.height);
-
-            // Nave
-            ctxN.fillStyle = '#00ff00';
-            ctxN.fillRect(nave.x, nave.y, nave.width, nave.height);
-
-            // Balas
-            ctxN.fillStyle = '#ffff00';
-            bullets.forEach(b => ctxN.fillRect(b.x, b.y, 4, 10));
-
-            // Inimigos
-            ctxN.fillStyle = '#ff0000';
-            enemies.forEach(e => ctxN.fillRect(e.x, e.y, e.width, e.height));
-
-            // Placar
-            ctxN.fillStyle = '#fff';
-            ctxN.font = '16px sans-serif';
-            ctxN.fillText(`Pontos: ${scoreN}`, 10, 25);
+        function gameOverCobrinha() {
+            isGameOver = true;
+            clearInterval(gameLoop);
+            // CORREÇÃO: Alerta simples, sem reset automático
+            alert(`Fim de Jogo (Cobrinha)! Pontuação: ${score}`);
+            // Mostra o botão de reiniciar manual
+            restartCobrinhaBtn.classList.add('show');
         }
 
-        function gameOverNave() {
-            isNaveOver = true;
-            cancelAnimationFrame(naveLoop);
-            alert(`Fim de jogo na Nave! Pontuação: ${scoreN}`);
-            restartNaveBtn.classList.add('show');
+        function startCobrinha() {
+            initCobrinha();
+            gameLoop = setInterval(draw, 100);
         }
 
-        function startNave() {
-            initNave();
-            updateNave();
-        }
+        // Evento do botão reiniciar manual da cobrinha
+        restartCobrinhaBtn.addEventListener('click', startCobrinha);
 
-        restartNaveBtn.addEventListener('click', startNave);
-
-        window.addEventListener('keydown', e => {
-            if (!secNave.classList.contains('active')) return;
-            keysNave[e.key] = true;
-            if (e.code === 'Space' && !isNaveOver) {
-                bullets.push({ x: nave.x + nave.width / 2 - 2, y: nave.y });
+        document.addEventListener('keydown', e => {
+            if (isGameOver) return;
+            switch (e.key) {
+                case 'ArrowUp': if (dy === 0) { dx = 0; dy = -1; } break;
+                case 'ArrowDown': if (dy === 0) { dx = 0; dy = 1; } break;
+                case 'ArrowLeft': if (dx === 0) { dx = -1; dy = 0; } break;
+                case 'ArrowRight': if (dx === 0) { dx = 1; dy = 0; } break;
             }
         });
-        window.addEventListener('keyup', e => { keysNave[e.key] = false; });
 
 
-        // --- 3. LÓGICA JOGO DA MEMÓRIA ---
-        const gridM = document.getElementById('memory-grid');
+        // --- 3. LÓGICA JOGO DA MEMÓRIA (Correção Problema 3) ---
+        const grid = document.getElementById('memory-grid');
         const restartMemoriaBtn = document.getElementById('restart-memoria');
+        // Pares de emoticons
         const items = ['🍕', '🍕', '🚗', '🚗', '🎈', '🎈', '🍦', '🍦', '🎸', '🎸', '🐶', '🐶', '🏀', '🏀', '💡', '💡'];
         
-        let hasFlippedCard = false, lockBoard = false, firstCard, secondCard, matchesFound = 0;
+        let hasFlippedCard = false;
+        let lockBoard = false;
+        let firstCard, secondCard;
+        let matchesFound = 0;
+
+        function shuffle(array) {
+            array.sort(() => Math.random() - 0.5);
+        }
 
         function createBoard() {
-            gridM.innerHTML = '';
-            items.sort(() => Math.random() - 0.5);
+            grid.innerHTML = ''; // Limpa o tabuleiro existente
+            shuffle(items);
             items.forEach(item => {
                 const card = document.createElement('div');
                 card.classList.add('card');
                 card.dataset.framework = item;
-                card.innerHTML = `<span>${item}</span>`;
+                card.innerHTML = `<span class="front-face">${item}</span>`;
                 card.addEventListener('click', flipCard);
-                gridM.appendChild(card);
+                grid.appendChild(card);
             });
             matchesFound = 0;
             lockBoard = false;
@@ -345,16 +229,19 @@
         }
 
         function flipCard() {
-            if (lockBoard || this === firstCard) return;
+            if (lockBoard) return;
+            if (this === firstCard) return;
 
             this.classList.add('flipped');
 
             if (!hasFlippedCard) {
+                // primeiro clique
                 hasFlippedCard = true;
                 firstCard = this;
                 return;
             }
 
+            // segundo clique
             secondCard = this;
             checkForMatch();
         }
@@ -367,16 +254,21 @@
         function disableCards() {
             firstCard.removeEventListener('click', flipCard);
             secondCard.removeEventListener('click', flipCard);
+            
             firstCard.classList.add('matched');
             secondCard.classList.add('matched');
-            matchesFound++;
 
+            matchesFound++;
+            
+            // Verificação de fim de jogo
             if (matchesFound === items.length / 2) {
                 setTimeout(() => {
-                    alert('Parabéns! Você concluiu o Jogo da Memória.');
+                    alert('Parabéns! Você encontrou todos os pares do Jogo da Memória.');
+                    // Mostra o botão reiniciar manual da memória
                     restartMemoriaBtn.classList.add('show');
                 }, 500);
             }
+
             resetBoard();
         }
 
@@ -398,11 +290,13 @@
             createBoard();
         }
 
+        // Evento do botão reiniciar manual da memória
         restartMemoriaBtn.addEventListener('click', startMemoryGame);
 
 
-        // INICIALIZAÇÃO (Inicia no Flappy Bird)
-        startFlappy();
+        // --- INICIALIZAÇÃO PADRÃO ---
+        // Começa com a Cobrinha ativa
+        startCobrinha();
 
     </script>
 </body>
