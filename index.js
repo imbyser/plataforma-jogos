@@ -35,7 +35,6 @@ app.post('/auth/register', async (req, res) => {
     return res.status(400).json({ error: 'A senha deve ter no mínimo 6 caracteres.' });
   }
 
-  // CORREÇÃO NA LINHA 41: Removida a aspa sobrando em cleanPhone
   const { data: existingUser } = await supabase
     .from('users')
     .select('id')
@@ -104,13 +103,11 @@ app.post('/webhook/kiwify', async (req, res) => {
   try {
     const { order_status, Customer } = req.body;
 
-    // Verifica se a compra foi paga/aprovada
     if (order_status === 'paid' && Customer) {
       const rawPhone = Customer.mobile || Customer.phone || '';
       const cleanPhone = rawPhone.replace(/\D/g, '');
 
       if (cleanPhone) {
-        // Atualiza o status do usuário para ACTIVE no Supabase
         await supabase
           .from('users')
           .update({ subscription_status: 'ACTIVE' })
@@ -127,7 +124,58 @@ app.post('/webhook/kiwify', async (req, res) => {
   }
 });
 
-// 4. MIDDLEWARE DE PROTEÇÃO DE ACESSO
+// 4. ROTAS DO PAINEL ADMINISTRATIVO (ADMIN)
+
+// Listar todos os usuários
+app.get('/admin/users', async (req, res) => {
+  try {
+    const { data: users, error } = await supabase
+      .from('users')
+      .select('id, name, phone, role, subscription_status, created_at');
+
+    if (error) throw error;
+    return res.json(users);
+  } catch (err) {
+    return res.status(500).json({ error: 'Erro ao buscar usuários: ' + err.message });
+  }
+});
+
+// Alternar Status do Usuário (ACTIVE / INACTIVE / BLOCKED)
+app.put('/admin/users/:id/status', async (req, res) => {
+  const { id } = req.params;
+  const { status } = req.body;
+
+  try {
+    const { error } = await supabase
+      .from('users')
+      .update({ subscription_status: status })
+      .eq('id', id);
+
+    if (error) throw error;
+    return res.json({ message: 'Status atualizado com sucesso!' });
+  } catch (err) {
+    return res.status(500).json({ error: 'Erro ao atualizar status: ' + err.message });
+  }
+});
+
+// Excluir Usuário
+app.delete('/admin/users/:id', async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const { error } = await supabase
+      .from('users')
+      .delete()
+      .eq('id', id);
+
+    if (error) throw error;
+    return res.json({ message: 'Usuário removido com sucesso!' });
+  } catch (err) {
+    return res.status(500).json({ error: 'Erro ao deletar usuário: ' + err.message });
+  }
+});
+
+// 5. MIDDLEWARE DE PROTEÇÃO DE ACESSO
 const requireActiveSubscription = async (req, res, next) => {
   const authHeader = req.headers.authorization;
   if (!authHeader) return res.status(401).json({ error: 'Token não fornecido.' });
@@ -156,7 +204,7 @@ const requireActiveSubscription = async (req, res, next) => {
   }
 };
 
-// 5. ROTA PROTEGIDA DOS JOGOS
+// 6. ROTA PROTEGIDA DOS JOGOS
 app.get('/game/play', requireActiveSubscription, (req, res) => {
   return res.json({
     message: 'Acesso liberado!',
