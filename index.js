@@ -35,10 +35,11 @@ app.post('/auth/register', async (req, res) => {
     return res.status(400).json({ error: 'A senha deve ter no mínimo 6 caracteres.' });
   }
 
+  // CORREÇÃO NA LINHA 41: Removida a aspa sobrando em cleanPhone
   const { data: existingUser } = await supabase
     .from('users')
     .select('id')
-    .eq('phone', cleanPhone')
+    .eq('phone', cleanPhone)
     .single();
 
   if (existingUser) {
