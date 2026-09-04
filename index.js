@@ -124,10 +124,37 @@ app.post('/webhook/kiwify', async (req, res) => {
   }
 });
 
-// 4. ROTAS DO PAINEL ADMINISTRATIVO (ADMIN)
+// 4. MIDDLEWARE DE PROTEÇÃO EXCLUSIVA DE ADMINISTRAÇÃO
+const requireAdmin = async (req, res, next) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader) return res.status(401).json({ error: 'Token não fornecido.' });
+
+  const [, token] = authHeader.split(' ');
+
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+
+    const { data: user } = await supabase
+      .from('users')
+      .select('*')
+      .eq('id', decoded.id)
+      .single();
+
+    if (!user || user.role !== 'ADMIN') {
+      return res.status(403).json({ error: 'Acesso negado. Apenas administradores podem acessar esta área.' });
+    }
+
+    req.user = user;
+    next();
+  } catch (err) {
+    return res.status(401).json({ error: 'Token inválido.' });
+  }
+};
+
+// 5. ROTAS DO PAINEL ADMINISTRATIVO (PROTEGIDAS COM requireAdmin)
 
 // Listar todos os usuários
-app.get('/admin/users', async (req, res) => {
+app.get('/admin/users', requireAdmin, async (req, res) => {
   try {
     const { data: users, error } = await supabase
       .from('users')
@@ -141,7 +168,7 @@ app.get('/admin/users', async (req, res) => {
 });
 
 // Alternar Status do Usuário (ACTIVE / INACTIVE / BLOCKED)
-app.put('/admin/users/:id/status', async (req, res) => {
+app.put('/admin/users/:id/status', requireAdmin, async (req, res) => {
   const { id } = req.params;
   const { status } = req.body;
 
@@ -159,7 +186,7 @@ app.put('/admin/users/:id/status', async (req, res) => {
 });
 
 // Excluir Usuário
-app.delete('/admin/users/:id', async (req, res) => {
+app.delete('/admin/users/:id', requireAdmin, async (req, res) => {
   const { id } = req.params;
 
   try {
@@ -175,7 +202,7 @@ app.delete('/admin/users/:id', async (req, res) => {
   }
 });
 
-// 5. MIDDLEWARE DE PROTEÇÃO DE ACESSO
+// 6. MIDDLEWARE DE PROTEÇÃO DE ACESSO AOS JOGOS
 const requireActiveSubscription = async (req, res, next) => {
   const authHeader = req.headers.authorization;
   if (!authHeader) return res.status(401).json({ error: 'Token não fornecido.' });
@@ -204,7 +231,7 @@ const requireActiveSubscription = async (req, res, next) => {
   }
 };
 
-// 6. ROTA PROTEGIDA DOS JOGOS
+// 7. ROTA PROTEGIDA DOS JOGOS
 app.get('/game/play', requireActiveSubscription, (req, res) => {
   return res.json({
     message: 'Acesso liberado!',
