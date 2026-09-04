@@ -6,7 +6,12 @@
     <title>Painel Administrativo - Usuários</title>
     <style>
         body { font-family: sans-serif; background-color: #121212; color: #fff; margin: 0; padding: 20px; }
-        .container { max-width: 950px; margin: 0 auto; background-color: #1e1e1e; padding: 20px; border-radius: 8px; }
+        
+        /* O container começa oculto por padrão por segurança */
+        #admin-content { display: none; max-width: 950px; margin: 0 auto; background-color: #1e1e1e; padding: 20px; border-radius: 8px; }
+        
+        #loading { text-align: center; margin-top: 50px; font-size: 18px; color: #ccc; }
+        
         h2 { margin-top: 0; }
         .actions-bar { display: flex; justify-content: space-between; margin-bottom: 20px; }
         input[type="text"] { padding: 8px; border-radius: 4px; border: 1px solid #444; background: #2a2a2a; color: #fff; width: 60%; }
@@ -24,7 +29,9 @@
 </head>
 <body>
 
-    <div class="container">
+    <div id="loading">Verificando permissões de acesso...</div>
+
+    <div id="admin-content">
         <h2>Painel Administrativo - Gerenciamento de Usuários</h2>
         
         <div class="actions-bar">
@@ -52,32 +59,45 @@
         const API_URL = 'https://plataforma-jogos-jpz5.onrender.com';
         let allUsers = [];
 
-        async function fetchUsers() {
+        async function verifyAndFetchUsers() {
             const token = localStorage.getItem('token');
             
+            // 1. Se não houver token no navegador, expulsa imediatamente
             if (!token) {
-                alert('Acesso negado! Faça login primeiro.');
+                alert('Acesso negado! Faça login como administrador para acessar esta página.');
                 window.location.href = '/index.html';
                 return;
             }
 
             try {
+                // 2. Faz a chamada incluindo o Token no cabeçalho
                 const res = await fetch(`${API_URL}/admin/users`, {
                     headers: {
                         'Authorization': `Bearer ${token}`
                     }
                 });
 
+                // 3. Se o servidor responder que o usuário NÃO é admin (401 ou 403), expulsa
                 if (res.status === 401 || res.status === 403) {
-                    alert('Acesso negado. Apenas administradores podem visualizar esta página.');
+                    alert('Acesso negado! Apenas administradores autorizados.');
                     window.location.href = '/index.html';
                     return;
                 }
 
+                if (!res.ok) {
+                    throw new Error('Erro ao carregar dados');
+                }
+
                 allUsers = await res.json();
+
+                // 4. Se a validação passou, esconde a mensagem de carregamento e exibe o painel
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('admin-content').style.display = 'block';
+
                 renderUsers(allUsers);
             } catch (err) {
-                alert('Erro ao carregar usuários do servidor!');
+                alert('Erro de autenticação ou conexão com o servidor.');
+                window.location.href = '/index.html';
             }
         }
 
@@ -143,7 +163,7 @@
                 });
 
                 if (res.ok) {
-                    fetchUsers();
+                    verifyAndFetchUsers();
                 } else {
                     alert('Erro ao atualizar status do usuário.');
                 }
@@ -165,7 +185,7 @@
                     });
 
                     if (res.ok) {
-                        fetchUsers();
+                        verifyAndFetchUsers();
                     } else {
                         alert('Erro ao excluir usuário.');
                     }
@@ -184,8 +204,8 @@
             renderUsers(filtered);
         }
 
-        // Carrega a lista com validação assim que abre a página
-        fetchUsers();
+        // Executa a verificação assim que a página é acessada
+        verifyAndFetchUsers();
     </script>
 </body>
 </html>
