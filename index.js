@@ -100,26 +100,60 @@ app.post('/auth/login', async (req, res) => {
   });
 });
 
-// 3. WEBHOOK DA KIWIFY
+// 3. WEBHOOK DA KIWIFY (Assinaturas + Recargas Avulsas)
 app.post('/webhook/kiwify', async (req, res) => {
   try {
-    const { order_status, Customer } = req.body;
+    const { order_status, Customer, Product } = req.body;
 
     if (order_status === 'paid' && Customer) {
       const rawPhone = Customer.mobile || Customer.phone || '';
       const cleanPhone = rawPhone.replace(/\D/g, '');
 
-      if (cleanPhone) {
-        // Ao renovar/pagar assinatura, atualiza status e recarrega os R$ 15,00
+      if (!cleanPhone) {
+        return res.status(400).json({ error: 'Telefone não identificado.' });
+      }
+
+      // Busca o usuário atual no Supabase
+      const { data: user } = await supabase
+        .from('users')
+        .select('id, game_balance')
+        .eq('phone', cleanPhone)
+        .single();
+
+      if (!user) {
+        console.log(`⚠️ Pagamento recebido, mas usuário não encontrado: ${cleanPhone}`);
+        return res.status(200).json({ received: true, warning: 'Usuário não cadastrado' });
+      }
+
+      const productName = Product ? Product.product_name.toLowerCase() : '';
+
+      // Se o nome do produto no Kiwify contiver "recarga"
+      if (productName.includes('recarga')) {
+        let topUpAmount = 10.00; // Valor padrão se não especificado
+        if (productName.includes('20')) topUpAmount = 20.00;
+        if (productName.includes('50')) topUpAmount = 50.00;
+
+        const currentBal = parseFloat(user.game_balance || 0);
+        const updatedBal = currentBal + topUpAmount;
+
+        await supabase
+          .from('users')
+          .update({ game_balance: updatedBal })
+          .eq('id', user.id);
+
+        console.log(`⚡ Recarga de R$ ${topUpAmount.toFixed(2)} aplicada para ${cleanPhone}. Novo saldo: R$ ${updatedBal.toFixed(2)}`);
+
+      } else {
+        // Fluxo Padrão: Assinatura Mensal (Ativa conta e define R$ 15,00)
         await supabase
           .from('users')
           .update({ 
             subscription_status: 'ACTIVE',
             game_balance: 15.00 
           })
-          .eq('phone', cleanPhone);
+          .eq('id', user.id);
 
-        console.log(`✅ Assinatura e saldo ativados via Kiwify para o celular: ${cleanPhone}`);
+        console.log(`✅ Assinatura/Renovação ativada para ${cleanPhone}. Saldo definido em R$ 15,00`);
       }
     }
 
@@ -216,7 +250,7 @@ app.delete('/admin/users/:id', requireAdmin, async (req, res) => {
 
 // 6. ROTAS DO JOGO, RANKING, SALDO E POTE DE OURO
 
-// Rota para consultar o saldo atual do jogo
+// Consultar Saldo Atual
 app.get('/game/balance', requireActiveSubscription, async (req, res) => {
   try {
     const currentBalance = parseFloat(req.user.game_balance || 0);
@@ -260,7 +294,7 @@ app.get('/game/leaderboard', async (req, res) => {
   }
 });
 
-// Salvar Pontuação + Processar Erros/Acertos do Saldo de Banca
+// Salvar Pontuação + Descontar Saldo por Erros
 app.post('/game/score', requireActiveSubscription, async (req, res) => {
   const { score, errors } = req.body;
   const user = req.user;
@@ -274,26 +308,22 @@ app.post('/game/score', requireActiveSubscription, async (req, res) => {
     let isRealMoneyGame = currentBalance > 0;
     let newBalance = currentBalance;
 
-    // Regra da Partida por Dinheiro
     if (isRealMoneyGame) {
-      const matchCost = 0.50; // Custo do crédito da partida
-      const penaltyPerError = 0.05; // Desconto por erro na partida
+      const matchCost = 0.50;
+      const penaltyPerError = 0.05;
       
       const totalErrors = typeof errors === 'number' ? errors : 0;
       const errorPenalty = totalErrors * penaltyPerError;
       
-      // Desconto real aplicado na banca
       const deduction = Math.min(currentBalance, matchCost + errorPenalty);
       newBalance = Math.max(0, currentBalance - deduction);
 
-      // Atualiza o saldo no banco de dados
       await supabase
         .from('users')
         .update({ game_balance: newBalance })
         .eq('id', user.id);
     }
 
-    // Atualiza Recorde de Pontos para o Ranking Top 10
     let newRecord = false;
     let updatedHighScore = user.high_score || 0;
 
