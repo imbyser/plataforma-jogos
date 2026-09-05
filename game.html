@@ -28,6 +28,46 @@
             margin: 0; 
         }
 
+        /* Estilos do Pote de Ouro e Ranking */
+        .pote-container {
+            background-color: #252525;
+            border: 2px solid #ffb703;
+            border-radius: 12px;
+            padding: 15px 20px;
+            max-width: 380px;
+            margin: 0 auto 25px auto;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+        }
+
+        .pote-container h2 {
+            color: #ffb703;
+            margin: 0 0 5px 0;
+            font-size: 22px;
+        }
+
+        .pote-container p {
+            font-size: 11px;
+            color: #aaa;
+            margin: 0 0 15px 0;
+        }
+
+        .pote-container h3 {
+            border-bottom: 1px solid #444;
+            padding-bottom: 5px;
+            text-align: left;
+            font-size: 14px;
+            margin: 10px 0 8px 0;
+            color: #fff;
+        }
+
+        .ranking-list {
+            padding-left: 20px;
+            text-align: left;
+            font-size: 13px;
+            line-height: 1.8;
+            margin: 0;
+        }
+
         /* Estilos do Jogo da Memória */
         #memory-grid { 
             display: grid; 
@@ -99,6 +139,17 @@
         <h2>Área de Jogos</h2>
     </div>
 
+    <!-- PAINEL DO POTE DE OURO E RANKING -->
+    <div class="pote-container">
+        <h2>🏆 Pote de Ouro: R$ <span id="pote-valor">0,00</span></h2>
+        <p>+ R$ 5,00 acumulados por cada novo assinante ativo!</p>
+
+        <h3>Top 10 Jogadores</h3>
+        <ol id="ranking-lista" class="ranking-list">
+            <li>Carregando ranking...</li>
+        </ol>
+    </div>
+
     <!-- SEÇÃO DO JOGO DA MEMÓRIA -->
     <div id="section-memoria">
         <h3>Jogo da Memória</h3>
@@ -112,6 +163,7 @@
     </div>
 
     <script>
+        const API_URL = 'https://plataforma-jogos-jpz5.onrender.com';
         const grid = document.getElementById('memory-grid');
         const restartMemoriaBtn = document.getElementById('restart-memoria');
         
@@ -122,6 +174,34 @@
         let lockBoard = false;
         let firstCard, secondCard;
         let matchesFound = 0;
+
+        // --- BUSCA POTE DE OURO E RANKING ---
+        async function carregarRankingEPote() {
+            try {
+                const res = await fetch(`${API_URL}/game/leaderboard`);
+                const data = await res.json();
+
+                // Atualiza o Pote
+                const valorPote = typeof data.poteDeOuro === 'number' ? data.poteDeOuro : 0;
+                document.getElementById('pote-valor').innerText = valorPote.toFixed(2).replace('.', ',');
+
+                // Atualiza o Ranking
+                const lista = document.getElementById('ranking-lista');
+                lista.innerHTML = '';
+
+                if (!data.ranking || data.ranking.length === 0) {
+                    lista.innerHTML = '<li>Nenhum jogador no ranking ainda. Seja o primeiro!</li>';
+                    return;
+                }
+
+                data.ranking.forEach(user => {
+                    lista.innerHTML += `<li><strong>${user.nome}</strong> — ${user.pontos} pts</li>`;
+                });
+            } catch (err) {
+                console.error('Erro ao buscar leaderboard:', err);
+                document.getElementById('ranking-lista').innerHTML = '<li>Erro ao carregar o ranking.</li>';
+            }
+        }
 
         function shuffle(array) {
             array.sort(() => Math.random() - 0.5);
@@ -208,8 +288,9 @@
         // Evento do botão reiniciar manual
         restartMemoriaBtn.addEventListener('click', startMemoryGame);
 
-        // Inicializa o jogo ao carregar a página
+        // Inicializa o jogo e carrega o painel de ranking ao abrir a página
         startMemoryGame();
+        carregarRankingEPote();
     </script>
 </body>
 </html>
