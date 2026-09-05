@@ -57,6 +57,7 @@ app.post('/auth/register', async (req, res) => {
         password: hashedPassword,
         role: isAdmin ? 'ADMIN' : 'USER',
         subscription_status: isAdmin ? 'ACTIVE' : 'INACTIVE',
+        game_balance: 15.00 // Saldo inicial para novos cadastros
       },
     ])
     .select()
@@ -94,6 +95,7 @@ app.post('/auth/login', async (req, res) => {
       phone: user.phone,
       role: user.role,
       subscriptionStatus: user.subscription_status,
+      gameBalance: user.game_balance || 0
     },
   });
 });
@@ -108,12 +110,16 @@ app.post('/webhook/kiwify', async (req, res) => {
       const cleanPhone = rawPhone.replace(/\D/g, '');
 
       if (cleanPhone) {
+        // Ao renovar/pagar assinatura, atualiza status e recarrega os R$ 15,00
         await supabase
           .from('users')
-          .update({ subscription_status: 'ACTIVE' })
+          .update({ 
+            subscription_status: 'ACTIVE',
+            game_balance: 15.00 
+          })
           .eq('phone', cleanPhone);
 
-        console.log(`✅ Assinatura ativada via Kiwify para o celular: ${cleanPhone}`);
+        console.log(`✅ Assinatura e saldo ativados via Kiwify para o celular: ${cleanPhone}`);
       }
     }
 
@@ -174,7 +180,7 @@ app.get('/admin/users', requireAdmin, async (req, res) => {
   try {
     const { data: users, error } = await supabase
       .from('users')
-      .select('id, name, phone, role, subscription_status, created_at');
+      .select('id, name, phone, role, subscription_status, game_balance, created_at');
 
     if (error) throw error;
     return res.json(users);
@@ -208,7 +214,17 @@ app.delete('/admin/users/:id', requireAdmin, async (req, res) => {
   }
 });
 
-// 6. ROTAS DO JOGO, RANKING E POTE DE OURO
+// 6. ROTAS DO JOGO, RANKING, SALDO E POTE DE OURO
+
+// Rota para consultar o saldo atual do jogo
+app.get('/game/balance', requireActiveSubscription, async (req, res) => {
+  try {
+    const currentBalance = parseFloat(req.user.game_balance || 0);
+    return res.json({ balance: currentBalance });
+  } catch (err) {
+    return res.status(500).json({ error: 'Erro ao buscar saldo: ' + err.message });
+  }
+});
 
 // Buscar Pote de Ouro (R$ 5/ativo) e Top 10 Ranking
 app.get('/game/leaderboard', async (req, res) => {
@@ -244,9 +260,9 @@ app.get('/game/leaderboard', async (req, res) => {
   }
 });
 
-// Salvar/Atualizar Pontuação do Jogador
+// Salvar Pontuação + Processar Erros/Acertos do Saldo de Banca
 app.post('/game/score', requireActiveSubscription, async (req, res) => {
-  const { score } = req.body;
+  const { score, errors } = req.body;
   const user = req.user;
 
   if (typeof score !== 'number') {
@@ -254,21 +270,57 @@ app.post('/game/score', requireActiveSubscription, async (req, res) => {
   }
 
   try {
-    // Atualiza apenas se a nova pontuação for maior que o recorde atual do usuário
-    if (score > (user.high_score || 0)) {
-      const { error } = await supabase
+    let currentBalance = parseFloat(user.game_balance || 0);
+    let isRealMoneyGame = currentBalance > 0;
+    let newBalance = currentBalance;
+
+    // Regra da Partida por Dinheiro
+    if (isRealMoneyGame) {
+      const matchCost = 0.50; // Custo do crédito da partida
+      const penaltyPerError = 0.05; // Desconto por erro na partida
+      
+      const totalErrors = typeof errors === 'number' ? errors : 0;
+      const errorPenalty = totalErrors * penaltyPerError;
+      
+      // Desconto real aplicado na banca
+      const deduction = Math.min(currentBalance, matchCost + errorPenalty);
+      newBalance = Math.max(0, currentBalance - deduction);
+
+      // Atualiza o saldo no banco de dados
+      await supabase
+        .from('users')
+        .update({ game_balance: newBalance })
+        .eq('id', user.id);
+    }
+
+    // Atualiza Recorde de Pontos para o Ranking Top 10
+    let newRecord = false;
+    let updatedHighScore = user.high_score || 0;
+
+    if (score > updatedHighScore) {
+      const { error: scoreErr } = await supabase
         .from('users')
         .update({ high_score: score })
         .eq('id', user.id);
 
-      if (error) throw error;
-
-      return res.json({ message: 'Novo recorde registrado com sucesso!', newRecord: true, score });
+      if (scoreErr) throw scoreErr;
+      newRecord = true;
+      updatedHighScore = score;
     }
 
-    return res.json({ message: 'Pontuação computada (não superou seu recorde).', newRecord: false, score: user.high_score });
+    return res.json({
+      success: true,
+      isRealMoneyGame,
+      remainingBalance: newBalance,
+      newRecord,
+      highScore: updatedHighScore,
+      message: isRealMoneyGame 
+        ? `Partida finalizada! Saldo restante: R$ ${newBalance.toFixed(2)}` 
+        : 'Partida concluída no Modo Treino! Pontuação salva no Ranking.'
+    });
+
   } catch (err) {
-    return res.status(500).json({ error: 'Erro ao salvar pontuação: ' + err.message });
+    return res.status(500).json({ error: 'Erro ao processar fim de partida: ' + err.message });
   }
 });
 
