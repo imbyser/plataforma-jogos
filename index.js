@@ -98,7 +98,7 @@ app.post('/auth/login', async (req, res) => {
   });
 });
 
-// 3. WEBHOOK DA KIWIFY (Aprovação Automática)
+// 3. WEBHOOK DA KIWIFY
 app.post('/webhook/kiwify', async (req, res) => {
   try {
     const { order_status, Customer } = req.body;
@@ -124,7 +124,7 @@ app.post('/webhook/kiwify', async (req, res) => {
   }
 });
 
-// 4. MIDDLEWARE DE PROTEÇÃO EXCLUSIVA DE ADMINISTRAÇÃO
+// 4. MIDDLEWARES DE PROTEÇÃO
 const requireAdmin = async (req, res, next) => {
   const authHeader = req.headers.authorization;
   if (!authHeader) return res.status(401).json({ error: 'Token não fornecido.' });
@@ -133,15 +133,10 @@ const requireAdmin = async (req, res, next) => {
 
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
-
-    const { data: user } = await supabase
-      .from('users')
-      .select('*')
-      .eq('id', decoded.id)
-      .single();
+    const { data: user } = await supabase.from('users').select('*').eq('id', decoded.id).single();
 
     if (!user || user.role !== 'ADMIN') {
-      return res.status(403).json({ error: 'Acesso negado. Apenas administradores podem acessar esta área.' });
+      return res.status(403).json({ error: 'Acesso negado. Apenas administradores.' });
     }
 
     req.user = user;
@@ -151,58 +146,6 @@ const requireAdmin = async (req, res, next) => {
   }
 };
 
-// 5. ROTAS DO PAINEL ADMINISTRATIVO (PROTEGIDAS COM requireAdmin)
-
-// Listar todos os usuários
-app.get('/admin/users', requireAdmin, async (req, res) => {
-  try {
-    const { data: users, error } = await supabase
-      .from('users')
-      .select('id, name, phone, role, subscription_status, created_at');
-
-    if (error) throw error;
-    return res.json(users);
-  } catch (err) {
-    return res.status(500).json({ error: 'Erro ao buscar usuários: ' + err.message });
-  }
-});
-
-// Alternar Status do Usuário (ACTIVE / INACTIVE / BLOCKED)
-app.put('/admin/users/:id/status', requireAdmin, async (req, res) => {
-  const { id } = req.params;
-  const { status } = req.body;
-
-  try {
-    const { error } = await supabase
-      .from('users')
-      .update({ subscription_status: status })
-      .eq('id', id);
-
-    if (error) throw error;
-    return res.json({ message: 'Status atualizado com sucesso!' });
-  } catch (err) {
-    return res.status(500).json({ error: 'Erro ao atualizar status: ' + err.message });
-  }
-});
-
-// Excluir Usuário
-app.delete('/admin/users/:id', requireAdmin, async (req, res) => {
-  const { id } = req.params;
-
-  try {
-    const { error } = await supabase
-      .from('users')
-      .delete()
-      .eq('id', id);
-
-    if (error) throw error;
-    return res.json({ message: 'Usuário removido com sucesso!' });
-  } catch (err) {
-    return res.status(500).json({ error: 'Erro ao deletar usuário: ' + err.message });
-  }
-});
-
-// 6. MIDDLEWARE DE PROTEÇÃO DE ACESSO AOS JOGOS
 const requireActiveSubscription = async (req, res, next) => {
   const authHeader = req.headers.authorization;
   if (!authHeader) return res.status(401).json({ error: 'Token não fornecido.' });
@@ -211,12 +154,7 @@ const requireActiveSubscription = async (req, res, next) => {
 
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
-
-    const { data: user } = await supabase
-      .from('users')
-      .select('*')
-      .eq('id', decoded.id)
-      .single();
+    const { data: user } = await supabase.from('users').select('*').eq('id', decoded.id).single();
 
     if (!user) return res.status(404).json({ error: 'Usuário não encontrado.' });
 
@@ -231,7 +169,110 @@ const requireActiveSubscription = async (req, res, next) => {
   }
 };
 
-// 7. ROTA PROTEGIDA DOS JOGOS
+// 5. ROTAS ADMINISTRATIVAS
+app.get('/admin/users', requireAdmin, async (req, res) => {
+  try {
+    const { data: users, error } = await supabase
+      .from('users')
+      .select('id, name, phone, role, subscription_status, created_at');
+
+    if (error) throw error;
+    return res.json(users);
+  } catch (err) {
+    return res.status(500).json({ error: 'Erro ao buscar usuários: ' + err.message });
+  }
+});
+
+app.put('/admin/users/:id/status', requireAdmin, async (req, res) => {
+  const { id } = req.params;
+  const { status } = req.body;
+
+  try {
+    const { error } = await supabase.from('users').update({ subscription_status: status }).eq('id', id);
+    if (error) throw error;
+    return res.json({ message: 'Status atualizado com sucesso!' });
+  } catch (err) {
+    return res.status(500).json({ error: 'Erro ao atualizar status: ' + err.message });
+  }
+});
+
+app.delete('/admin/users/:id', requireAdmin, async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const { error } = await supabase.from('users').delete().eq('id', id);
+    if (error) throw error;
+    return res.json({ message: 'Usuário removido com sucesso!' });
+  } catch (err) {
+    return res.status(500).json({ error: 'Erro ao deletar usuário: ' + err.message });
+  }
+});
+
+// 6. ROTAS DO JOGO, RANKING E POTE DE OURO
+
+// Buscar Pote de Ouro (R$ 5/ativo) e Top 10 Ranking
+app.get('/game/leaderboard', async (req, res) => {
+  try {
+    const { count: activeUsers, error: countError } = await supabase
+      .from('users')
+      .select('id', { count: 'exact', head: true })
+      .eq('subscription_status', 'ACTIVE');
+
+    if (countError) throw countError;
+
+    const poteDeOuro = (activeUsers || 0) * 5;
+
+    const { data: topUsers, error: rankError } = await supabase
+      .from('users')
+      .select('name, phone, high_score')
+      .gt('high_score', 0)
+      .order('high_score', { ascending: false })
+      .limit(10);
+
+    if (rankError) throw rankError;
+
+    return res.json({
+      poteDeOuro,
+      ranking: topUsers.map((user, index) => ({
+        posicao: index + 1,
+        nome: user.name || `Jogador ***${user.phone ? user.phone.slice(-4) : '0000'}`,
+        pontos: user.high_score
+      }))
+    });
+  } catch (err) {
+    return res.status(500).json({ error: 'Erro ao carregar ranking: ' + err.message });
+  }
+});
+
+// Salvar/Atualizar Pontuação do Jogador
+app.post('/game/score', requireActiveSubscription, async (req, res) => {
+  const { score } = req.body;
+  const user = req.user;
+
+  if (typeof score !== 'number') {
+    return res.status(400).json({ error: 'Pontuação inválida.' });
+  }
+
+  try {
+    // Atualiza apenas se a nova pontuação for maior que o recorde atual do usuário
+    if (score > (user.high_score || 0)) {
+      const { error } = await supabase
+        .from('users')
+        .update({ high_score: score })
+        .eq('id', user.id);
+
+      if (error) throw error;
+
+      return res.json({ message: 'Novo recorde registrado com sucesso!', newRecord: true, score });
+    }
+
+    return res.json({ message: 'Pontuação computada (não superou seu recorde).', newRecord: false, score: user.high_score });
+  } catch (err) {
+    return res.status(500).json({ error: 'Erro ao salvar pontuação: ' + err.message });
+  }
+});
+
+// Rota de Acesso Liberado ao Jogo
 app.get('/game/play', requireActiveSubscription, (req, res) => {
   return res.json({
     message: 'Acesso liberado!',
