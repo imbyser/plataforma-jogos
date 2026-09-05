@@ -175,6 +175,10 @@
         let firstCard, secondCard;
         let matchesFound = 0;
 
+        // Variáveis de tempo e precisão
+        let startTime;
+        let wrongAttempts = 0;
+
         // --- BUSCA POTE DE OURO E RANKING ---
         async function carregarRankingEPote() {
             try {
@@ -203,6 +207,34 @@
             }
         }
 
+        // --- ENVIA A PONTUAÇÃO AO SERVIDOR ---
+        async function enviarPontuacao(pontos) {
+            const token = localStorage.getItem('token');
+            if (!token) return;
+
+            try {
+                const res = await fetch(`${API_URL}/game/score`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ score: pontos })
+                });
+
+                const data = await res.json();
+
+                if (data.newRecord) {
+                    alert('🔥 Novo recorde pessoal registrado no ranking!');
+                }
+
+                // Atualiza a lista do ranking na tela
+                carregarRankingEPote();
+            } catch (err) {
+                console.error('Erro ao enviar pontuação:', err);
+            }
+        }
+
         function shuffle(array) {
             array.sort(() => Math.random() - 0.5);
         }
@@ -219,6 +251,8 @@
                 grid.appendChild(card);
             });
             matchesFound = 0;
+            wrongAttempts = 0; // Reseta os erros do jogo anterior
+            startTime = Date.now(); // Inicia o cronômetro da partida
             lockBoard = false;
             hasFlippedCard = false;
             restartMemoriaBtn.classList.remove('show');
@@ -258,8 +292,20 @@
             
             // Verificação de fim de jogo
             if (matchesFound === items.length / 2) {
+                const timeSpentSeconds = Math.floor((Date.now() - startTime) / 1000);
+                
+                // Cálculo: Base (800) + Bônus Tempo (300 - tempo) - Penalidade (10 por erro)
+                const baseScore = 800;
+                const timeBonus = Math.max(0, 300 - timeSpentSeconds);
+                const errorPenalty = wrongAttempts * 10;
+                const finalScore = Math.max(100, baseScore + timeBonus - errorPenalty);
+
                 setTimeout(() => {
-                    alert('Parabéns! Você encontrou todos os pares do Jogo da Memória.');
+                    alert(`Parabéns! Você concluiu em ${timeSpentSeconds}s com ${wrongAttempts} erro(s).\nPontuação: ${finalScore} pts!`);
+                    
+                    // Envia os pontos para o servidor
+                    enviarPontuacao(finalScore);
+                    
                     restartMemoriaBtn.classList.add('show');
                 }, 500);
             }
@@ -269,6 +315,7 @@
 
         function unflipCards() {
             lockBoard = true;
+            wrongAttempts++; // Incrementa contador de erros
             setTimeout(() => {
                 firstCard.classList.remove('flipped');
                 secondCard.classList.remove('flipped');
