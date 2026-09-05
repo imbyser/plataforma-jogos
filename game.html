@@ -1,343 +1,330 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Plataforma de Jogos - Jogo da Memória</title>
-    <style>
-        body { 
-            font-family: sans-serif; 
-            background-color: #1a1a1a; 
-            color: white; 
-            text-align: center; 
-            margin: 0; 
-            padding: 20px; 
-        }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Plataforma de Jogos - Jogo da Memória</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #121212;
+      color: #ffffff;
+      text-align: center;
+      margin: 0;
+      padding: 20px;
+    }
 
-        .nav-header { 
-            display: flex; 
-            justify-content: center; 
-            align-items: center; 
-            background-color: #333; 
-            padding: 10px 20px; 
-            border-radius: 8px; 
-            margin-bottom: 20px; 
-        }
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+    }
 
-        .nav-header h2 { 
-            margin: 0; 
-        }
+    /* Painel do Topo (Status & Saldo) */
+    .dashboard {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #1e1e1e;
+      padding: 15px;
+      border-radius: 12px;
+      margin-bottom: 20px;
+      border: 1px solid #333;
+    }
 
-        /* Estilos do Pote de Ouro e Ranking */
-        .pote-container {
-            background-color: #252525;
-            border: 2px solid #ffb703;
-            border-radius: 12px;
-            padding: 15px 20px;
-            max-width: 380px;
-            margin: 0 auto 25px auto;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
-        }
+    .balance-box {
+      text-align: left;
+    }
 
-        .pote-container h2 {
-            color: #ffb703;
-            margin: 0 0 5px 0;
-            font-size: 22px;
-        }
+    .balance-title { font-size: 12px; color: #aaa; text-transform: uppercase; }
+    .balance-value { font-size: 22px; font-weight: bold; color: #2ecc71; }
 
-        .pote-container p {
-            font-size: 11px;
-            color: #aaa;
-            margin: 0 0 15px 0;
-        }
+    .mode-badge {
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: bold;
+    }
 
-        .pote-container h3 {
-            border-bottom: 1px solid #444;
-            padding-bottom: 5px;
-            text-align: left;
-            font-size: 14px;
-            margin: 10px 0 8px 0;
-            color: #fff;
-        }
+    .mode-real { background-color: #27ae60; color: #fff; }
+    .mode-demo { background-color: #e67e22; color: #fff; }
 
-        .ranking-list {
-            padding-left: 20px;
-            text-align: left;
-            font-size: 13px;
-            line-height: 1.8;
-            margin: 0;
-        }
+    /* Indicadores do Jogo */
+    .stats {
+      display: flex;
+      justify-content: space-around;
+      background: #252525;
+      padding: 10px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+    }
 
-        /* Estilos do Jogo da Memória */
-        #memory-grid { 
-            display: grid; 
-            grid-template-columns: repeat(4, 80px); 
-            gap: 10px; 
-            justify-content: center; 
-            margin-top: 20px; 
-        }
+    .stat-item { font-size: 14px; }
+    .stat-value { font-size: 18px; font-weight: bold; color: #f39c12; }
 
-        .card { 
-            width: 80px; 
-            height: 80px; 
-            background-color: #444; 
-            border-radius: 8px; 
-            cursor: pointer; 
-            display: flex; 
-            justify-content: center; 
-            align-items: center; 
-            font-size: 2em; 
-            color: transparent; 
-            user-select: none; 
-            transition: background-color 0.3s; 
-        }
+    /* Tabuleiro do Jogo */
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      margin: 0 auto 20px;
+    }
 
-        .card.flipped { 
-            background-color: #fff; 
-            color: #333; 
-            cursor: default; 
-        }
+    .card {
+      aspect-ratio: 1;
+      background-color: #2c3e50;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 28px;
+      cursor: pointer;
+      user-select: none;
+      transition: transform 0.2s, background-color 0.2s;
+    }
 
-        .card.matched { 
-            background-color: #2e7d32; 
-            color: #fff; 
-            cursor: default; 
-            animation: pulse 0.5s; 
-        }
+    .card.flipped {
+      background-color: #34495e;
+      cursor: default;
+    }
 
-        @keyframes pulse { 
-            0% { transform: scale(1); } 
-            50% { transform: scale(1.1); } 
-            100% { transform: scale(1); } 
-        }
+    .card.matched {
+      background-color: #27ae60;
+      cursor: default;
+    }
 
-        /* Botão Reiniciar */
-        .restart-btn { 
-            background-color: #f44336; 
-            color: white; 
-            border: none; 
-            padding: 10px 20px; 
-            border-radius: 5px; 
-            cursor: pointer; 
-            margin-top: 20px; 
-            font-size: 16px; 
-            display: none; 
-        }
+    /* Botões */
+    .btn {
+      background-color: #3498db;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      font-size: 16px;
+      font-weight: bold;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.2s;
+      margin: 5px;
+    }
 
-        .restart-btn.show { 
-            display: inline-block; 
-        }
+    .btn:hover { background-color: #2980b9; }
+    .btn-recharge { background-color: #e74c3c; display: none; }
+    .btn-recharge:hover { background-color: #c0392b; }
 
-        .restart-btn:hover { 
-            background-color: #d32f2f; 
-        }
-    </style>
+    /* Mensagem de Fim de Jogo */
+    #msg-modal {
+      display: none;
+      background: #1e1e1e;
+      border: 1px solid #444;
+      padding: 20px;
+      border-radius: 12px;
+      margin-top: 15px;
+    }
+  </style>
 </head>
 <body>
 
-    <div class="nav-header">
-        <h2>Área de Jogos</h2>
+  <div class="container">
+    <!-- Painel de Saldo e Modo -->
+    <div class="dashboard">
+      <div class="balance-box">
+        <div class="balance-title">Saldo para Jogar</div>
+        <div class="balance-value" id="game-balance">R$ --,--</div>
+      </div>
+      <div id="game-mode" class="mode-badge mode-real">Carregando...</div>
     </div>
 
-    <!-- PAINEL DO POTE DE OURO E RANKING -->
-    <div class="pote-container">
-        <h2>🏆 Pote de Ouro: R$ <span id="pote-valor">0,00</span></h2>
-        <p>+ R$ 5,00 acumulados por cada novo assinante ativo!</p>
-
-        <h3>Top 10 Jogadores</h3>
-        <ol id="ranking-lista" class="ranking-list">
-            <li>Carregando ranking...</li>
-        </ol>
+    <!-- Indicadores da Partida -->
+    <div class="stats">
+      <div class="stat-item">Pontos: <span id="score-val" class="stat-value">0</span></div>
+      <div class="stat-item">Erros: <span id="errors-val" class="stat-value" style="color: #e74c3c;">0</span></div>
+      <div class="stat-item">Pares: <span id="pairs-val" class="stat-value">0/8</span></div>
     </div>
 
-    <!-- SEÇÃO DO JOGO DA MEMÓRIA -->
-    <div id="section-memoria">
-        <h3>Jogo da Memória</h3>
-        <p>Encontre os pares de emoticons.</p>
-        
-        <div id="memory-grid">
-            <!-- Cartas geradas via JS -->
-        </div>
+    <!-- Tabuleiro -->
+    <div class="grid" id="grid"></div>
 
-        <button id="restart-memoria" class="restart-btn">Reiniciar Jogo</button>
+    <!-- Ações e Mensagens -->
+    <button class="btn" onclick="restartGame()">Reiniciar Partida</button>
+    <button id="btn-recharge" class="btn btn-recharge" onclick="rechargeNotice()">Recarregar Saldo</button>
+
+    <div id="msg-modal">
+      <h3 id="modal-title" style="margin-top: 0;"></h3>
+      <p id="modal-desc"></p>
     </div>
+  </div>
 
-    <script>
-        const API_URL = 'https://plataforma-jogos-jpz5.onrender.com';
-        const grid = document.getElementById('memory-grid');
-        const restartMemoriaBtn = document.getElementById('restart-memoria');
+  <script>
+    const EMOJIS = ['🚀', '💎', '🔥', '🏆', '🎰', '⚡', '🎯', '👑'];
+    let cards = [];
+    let flippedCards = [];
+    let matchedPairs = 0;
+    let errors = 0;
+    let score = 0;
+    let lockBoard = false;
+    let userBalance = 0;
+
+    const token = localStorage.getItem('token');
+
+    // Inicialização
+    window.onload = () => {
+      if (!token) {
+        alert('Faça login para jogar!');
+        window.location.href = '/index.html';
+        return;
+      }
+      fetchBalance();
+      initGame();
+    };
+
+    // 1. Consulta o saldo atual no servidor
+    async function fetchBalance() {
+      try {
+        const res = await fetch('/game/balance', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await res.json();
         
-        // Pares de emoticons
-        const items = ['🍕', '🍕', '🚗', '🚗', '🎈', '🎈', '🍦', '🍦', '🎸', '🎸', '🐶', '🐶', '🏀', '🏀', '💡', '💡'];
+        if (res.ok) {
+          userBalance = data.balance;
+          updateDashboard();
+        }
+      } catch (err) {
+        console.error('Erro ao buscar saldo:', err);
+      }
+    }
+
+    // 2. Atualiza a interface com o saldo e modo atual
+    function updateDashboard() {
+      const balanceEl = document.getElementById('game-balance');
+      const modeEl = document.getElementById('game-mode');
+      const rechargeBtn = document.getElementById('btn-recharge');
+
+      balanceEl.innerText = `R$ ${userBalance.toFixed(2)}`;
+
+      if (userBalance > 0) {
+        modeEl.innerText = 'Modo Valendo Dinheiro';
+        modeEl.className = 'mode-badge mode-real';
+        rechargeBtn.style.display = 'none';
+      } else {
+        modeEl.innerText = 'Modo Treino (Ranking)';
+        modeEl.className = 'mode-badge mode-demo';
+        rechargeBtn.style.display = 'inline-block';
+      }
+    }
+
+    // 3. Inicializa o tabuleiro do jogo
+    function initGame() {
+      const grid = document.getElementById('grid');
+      grid.innerHTML = '';
+      
+      const deck = [...EMOJIS, ...EMOJIS].sort(() => Math.random() - 0.5);
+      cards = [];
+      flippedCards = [];
+      matchedPairs = 0;
+      errors = 0;
+      score = 0;
+      lockBoard = false;
+
+      document.getElementById('score-val').innerText = '0';
+      document.getElementById('errors-val').innerText = '0';
+      document.getElementById('pairs-val').innerText = '0/8';
+      document.getElementById('msg-modal').style.display = 'none';
+
+      deck.forEach((symbol, index) => {
+        const card = document.createElement('div');
+        card.classList.add('card');
+        card.dataset.symbol = symbol;
+        card.dataset.index = index;
+        card.addEventListener('click', flipCard);
+        grid.appendChild(card);
+        cards.push(card);
+      });
+    }
+
+    // 4. Lógica de virar a carta
+    function flipCard() {
+      if (lockBoard) return;
+      if (this.classList.contains('flipped') || this.classList.contains('matched')) return;
+
+      this.classList.add('flipped');
+      this.innerText = this.dataset.symbol;
+      flippedCards.push(this);
+
+      if (flippedCards.length === 2) {
+        checkMatch();
+      }
+    }
+
+    // 5. Verifica correspondência dos pares
+    function checkMatch() {
+      lockBoard = true;
+      const [card1, card2] = flippedCards;
+
+      if (card1.dataset.symbol === card2.dataset.symbol) {
+        card1.classList.add('matched');
+        card2.classList.add('matched');
+        matchedPairs++;
+        score += 100;
         
-        let hasFlippedCard = false;
-        let lockBoard = false;
-        let firstCard, secondCard;
-        let matchesFound = 0;
+        document.getElementById('score-val').innerText = score;
+        document.getElementById('pairs-val').innerText = `${matchedPairs}/8`;
+        flippedCards = [];
+        lockBoard = false;
 
-        // Variáveis de tempo e precisão
-        let startTime;
-        let wrongAttempts = 0;
-
-        // --- BUSCA POTE DE OURO E RANKING ---
-        async function carregarRankingEPote() {
-            try {
-                const res = await fetch(`${API_URL}/game/leaderboard`);
-                const data = await res.json();
-
-                // Atualiza o Pote
-                const valorPote = typeof data.poteDeOuro === 'number' ? data.poteDeOuro : 0;
-                document.getElementById('pote-valor').innerText = valorPote.toFixed(2).replace('.', ',');
-
-                // Atualiza o Ranking
-                const lista = document.getElementById('ranking-lista');
-                lista.innerHTML = '';
-
-                if (!data.ranking || data.ranking.length === 0) {
-                    lista.innerHTML = '<li>Nenhum jogador no ranking ainda. Seja o primeiro!</li>';
-                    return;
-                }
-
-                data.ranking.forEach(user => {
-                    lista.innerHTML += `<li><strong>${user.nome}</strong> — ${user.pontos} pts</li>`;
-                });
-            } catch (err) {
-                console.error('Erro ao buscar leaderboard:', err);
-                document.getElementById('ranking-lista').innerHTML = '<li>Erro ao carregar o ranking.</li>';
-            }
+        if (matchedPairs === EMOJIS.length) {
+          finishGame();
         }
+      } else {
+        errors++;
+        document.getElementById('errors-val').innerText = errors;
+        
+        setTimeout(() => {
+          card1.classList.remove('flipped');
+          card2.classList.remove('flipped');
+          card1.innerText = '';
+          card2.innerText = '';
+          flippedCards = [];
+          lockBoard = false;
+        }, 1000);
+      }
+    }
 
-        // --- ENVIA A PONTUAÇÃO AO SERVIDOR ---
-        async function enviarPontuacao(pontos) {
-            const token = localStorage.getItem('token');
-            if (!token) return;
+    // 6. Envia o resultado para o servidor
+    async function finishGame() {
+      try {
+        const res = await fetch('/game/score', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ score, errors })
+        });
 
-            try {
-                const res = await fetch(`${API_URL}/game/score`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}`
-                    },
-                    body: JSON.stringify({ score: pontos })
-                });
+        const data = await res.json();
 
-                const data = await res.json();
+        if (res.ok) {
+          userBalance = data.remainingBalance;
+          updateDashboard();
 
-                if (data.newRecord) {
-                    alert('🔥 Novo recorde pessoal registrado no ranking!');
-                }
-
-                // Atualiza a lista do ranking na tela
-                carregarRankingEPote();
-            } catch (err) {
-                console.error('Erro ao enviar pontuação:', err);
-            }
+          const modal = document.getElementById('msg-modal');
+          document.getElementById('modal-title').innerText = '🎉 Partida Finalizada!';
+          document.getElementById('modal-desc').innerText = data.message;
+          modal.style.display = 'block';
         }
+      } catch (err) {
+        console.error('Erro ao finalizar jogo:', err);
+      }
+    }
 
-        function shuffle(array) {
-            array.sort(() => Math.random() - 0.5);
-        }
+    function restartGame() {
+      initGame();
+    }
 
-        function createBoard() {
-            grid.innerHTML = ''; // Limpa o tabuleiro existente
-            shuffle(items);
-            items.forEach(item => {
-                const card = document.createElement('div');
-                card.classList.add('card');
-                card.dataset.framework = item;
-                card.innerHTML = `<span class="front-face">${item}</span>`;
-                card.addEventListener('click', flipCard);
-                grid.appendChild(card);
-            });
-            matchesFound = 0;
-            wrongAttempts = 0; // Reseta os erros do jogo anterior
-            startTime = Date.now(); // Inicia o cronômetro da partida
-            lockBoard = false;
-            hasFlippedCard = false;
-            restartMemoriaBtn.classList.remove('show');
-        }
-
-        function flipCard() {
-            if (lockBoard) return;
-            if (this === firstCard) return;
-
-            this.classList.add('flipped');
-
-            if (!hasFlippedCard) {
-                // Primeiro clique
-                hasFlippedCard = true;
-                firstCard = this;
-                return;
-            }
-
-            // Segundo clique
-            secondCard = this;
-            checkForMatch();
-        }
-
-        function checkForMatch() {
-            let isMatch = firstCard.dataset.framework === secondCard.dataset.framework;
-            isMatch ? disableCards() : unflipCards();
-        }
-
-        function disableCards() {
-            firstCard.removeEventListener('click', flipCard);
-            secondCard.removeEventListener('click', flipCard);
-            
-            firstCard.classList.add('matched');
-            secondCard.classList.add('matched');
-
-            matchesFound++;
-            
-            // Verificação de fim de jogo
-            if (matchesFound === items.length / 2) {
-                const timeSpentSeconds = Math.floor((Date.now() - startTime) / 1000);
-                
-                // Cálculo: Base (800) + Bônus Tempo (300 - tempo) - Penalidade (10 por erro)
-                const baseScore = 800;
-                const timeBonus = Math.max(0, 300 - timeSpentSeconds);
-                const errorPenalty = wrongAttempts * 10;
-                const finalScore = Math.max(100, baseScore + timeBonus - errorPenalty);
-
-                setTimeout(() => {
-                    alert(`Parabéns! Você concluiu em ${timeSpentSeconds}s com ${wrongAttempts} erro(s).\nPontuação: ${finalScore} pts!`);
-                    
-                    // Envia os pontos para o servidor
-                    enviarPontuacao(finalScore);
-                    
-                    restartMemoriaBtn.classList.add('show');
-                }, 500);
-            }
-
-            resetBoard();
-        }
-
-        function unflipCards() {
-            lockBoard = true;
-            wrongAttempts++; // Incrementa contador de erros
-            setTimeout(() => {
-                firstCard.classList.remove('flipped');
-                secondCard.classList.remove('flipped');
-                resetBoard();
-            }, 1000);
-        }
-
-        function resetBoard() {
-            [hasFlippedCard, lockBoard] = [false, false];
-            [firstCard, secondCard] = [null, null];
-        }
-
-        function startMemoryGame() {
-            createBoard();
-        }
-
-        // Evento do botão reiniciar manual
-        restartMemoriaBtn.addEventListener('click', startMemoryGame);
-
-        // Inicializa o jogo e carrega o painel de ranking ao abrir a página
-        startMemoryGame();
-        carregarRankingEPote();
-    </script>
+    function rechargeNotice() {
+      alert('Para recarregar seu saldo de banca, realize um novo PIX na plataforma ou fale com o suporte.');
+    }
+  </script>
 </body>
 </html>
