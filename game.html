@@ -146,7 +146,7 @@
 
     <!-- Ações e Mensagens -->
     <button class="btn" onclick="restartGame()">Reiniciar Partida</button>
-    <button id="btn-recharge" class="btn btn-recharge" onclick="rechargeNotice()">Recarregar Saldo</button>
+    <button id="btn-recharge" class="btn btn-recharge" onclick="rechargeNotice()">⚡ Recarregar Saldo</button>
 
     <div id="msg-modal">
       <h3 id="modal-title" style="margin-top: 0;"></h3>
@@ -163,6 +163,9 @@
     let score = 0;
     let lockBoard = false;
     let userBalance = 0;
+
+    // Cole o seu link de checkout da Kiwify de recarga entre as aspas abaixo:
+    const KIWIFY_RECHARGE_URL = 'https://pay.kiwify.com.br/SEU_LINK_DE_RECARGA';
 
     const token = localStorage.getItem('token');
 
@@ -322,8 +325,11 @@
       initGame();
     }
 
+    // Redireciona para o checkout de recarga da Kiwify
     function rechargeNotice() {
-      alert('Para recarregar seu saldo de banca, realize um novo PIX na plataforma ou fale com o suporte.');
+      if (confirm('Deseja fazer uma recarga de saldo via PIX para continuar jogando valendo dinheiro?')) {
+        window.open(KIWIFY_RECHARGE_URL, '_blank');
+      }
     }
   </script>
 </body>
